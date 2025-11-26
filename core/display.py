@@ -9,9 +9,9 @@ try:
     import ST7789
     import RPi.GPIO as GPIO
     HARDWARE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     HARDWARE_AVAILABLE = False
-    print("Hardware libraries not found. Running in Simulation Mode.")
+    print(f"Hardware libraries not found ({e}). Running in Simulation Mode.")
 
 class DisplayManager:
     def __init__(self, simulate=False):

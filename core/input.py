@@ -28,18 +28,22 @@ class InputManager:
             print("Input Manager running in Simulation Mode (Use Left/Right Arrows, Enter, Esc)")
 
     def _init_hardware(self):
-        GPIO.setmode(GPIO.BCM)
-        
-        # Encoder Pins
-        GPIO.setup(config.PIN_ENCODER_CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(config.PIN_ENCODER_DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(config.PIN_ENCODER_SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        
-        # Add interrupts
-        GPIO.add_event_detect(config.PIN_ENCODER_CLK, GPIO.BOTH, callback=self._encoder_callback)
-        GPIO.add_event_detect(config.PIN_ENCODER_SW, GPIO.BOTH, callback=self._button_callback, bouncetime=50)
-        
-        self.clk_last_state = GPIO.input(config.PIN_ENCODER_CLK)
+        try:
+            GPIO.setmode(GPIO.BCM)
+            
+            # Encoder Pins
+            GPIO.setup(config.PIN_ENCODER_CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            GPIO.setup(config.PIN_ENCODER_DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            GPIO.setup(config.PIN_ENCODER_SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            
+            # Add interrupts
+            GPIO.add_event_detect(config.PIN_ENCODER_CLK, GPIO.BOTH, callback=self._encoder_callback)
+            GPIO.add_event_detect(config.PIN_ENCODER_SW, GPIO.BOTH, callback=self._button_callback, bouncetime=50)
+            
+            self.clk_last_state = GPIO.input(config.PIN_ENCODER_CLK)
+        except Exception as e:
+            print(f"Input Hardware Init Failed: {e}")
+            self.simulate = True
 
     def _encoder_callback(self, channel):
         clk_state = GPIO.input(config.PIN_ENCODER_CLK)

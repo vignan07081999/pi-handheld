@@ -20,12 +20,16 @@ class HapticManager:
             print("Haptic Manager running in Simulation Mode")
 
     def _init_hardware(self):
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(config.PIN_HAPTIC, GPIO.OUT)
-        # Initialize PWM for variable intensity if supported
-        # Frequency 100Hz is usually good for ERM motors
-        self.pwm = GPIO.PWM(config.PIN_HAPTIC, 100)
-        self.pwm.start(0)
+        try:
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(config.PIN_HAPTIC, GPIO.OUT)
+            # Initialize PWM for variable intensity if supported
+            # Frequency 100Hz is usually good for ERM motors
+            self.pwm = GPIO.PWM(config.PIN_HAPTIC, 100)
+            self.pwm.start(0)
+        except Exception as e:
+            print(f"Haptic Hardware Init Failed: {e}")
+            self.simulate = True
 
     def vibrate(self, duration=0.05, intensity=1.0):
         """

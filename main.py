@@ -16,6 +16,12 @@ def main():
     
     # Initialize Core Systems
     display = DisplayManager(simulate=args.sim)
+    
+    # If Display failed to load hardware, force simulation for everything else
+    if display.simulate and not args.sim:
+        print("Display hardware unavailable. Forcing Simulation Mode for all components.")
+        args.sim = True
+
     haptic = HapticManager(simulate=args.sim)
     input_manager = InputManager(simulate=args.sim)
     
