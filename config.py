@@ -41,8 +41,9 @@ FONT_SIZE_TITLE = 32
 # ==========================================
 ANIMATION_SPEED = 0.1
 LONG_PRESS_TIME = 1.0
-HAPTIC_DURATION_SHORT = 0.015 # 15ms for crisp tick
-HAPTIC_DURATION_LONG = 0.1    # 100ms for bump
+HAPTIC_DURATION_SHORT = 0.03 # 30ms for crisp tick (PWM failed, using short pulse)
+HAPTIC_DURATION_LONG = 0.15   # 150ms for bump
+TOP_BAR_HEIGHT = 24
 
 # ==========================================
 # DYNAMIC CONFIGURATION (Load from JSON)

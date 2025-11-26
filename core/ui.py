@@ -158,9 +158,9 @@ class CarouselMenu(BaseMenu):
                 
             margin = 10
             card_x = x + margin
-            card_y = margin
+            card_y = margin + config.TOP_BAR_HEIGHT
             card_w = config.DISPLAY_WIDTH - 2 * margin
-            card_h = config.DISPLAY_HEIGHT - 2 * margin
+            card_h = config.DISPLAY_HEIGHT - 2 * margin - config.TOP_BAR_HEIGHT
             
             is_selected = (i == self.selected_index)
             bg_color = (30, 30, 30) if not is_selected else (50, 50, 50)
@@ -225,11 +225,11 @@ class ListMenu(BaseMenu):
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
         
         # Title
-        draw.rectangle((0, 0, config.DISPLAY_WIDTH, 40), fill=(30, 30, 30))
-        draw.text((10, 5), self.title, font=self.title_font, fill=config.COLOR_ACCENT)
+        draw.rectangle((0, config.TOP_BAR_HEIGHT, config.DISPLAY_WIDTH, config.TOP_BAR_HEIGHT + 40), fill=(30, 30, 30))
+        draw.text((10, config.TOP_BAR_HEIGHT + 5), self.title, font=self.title_font, fill=config.COLOR_ACCENT)
         
         # Items
-        start_y = 50
+        start_y = config.TOP_BAR_HEIGHT + 50
         item_h = 40
         
         for i in range(self.visible_items):
@@ -389,10 +389,10 @@ class Keyboard:
 
     def draw(self, draw):
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=(20, 20, 20))
-        draw.rectangle((10, 10, config.DISPLAY_WIDTH - 10, 50), fill="white")
-        draw.text((15, 15), self.text + "|", font=self.font, fill="black")
+        draw.rectangle((10, config.TOP_BAR_HEIGHT + 10, config.DISPLAY_WIDTH - 10, config.TOP_BAR_HEIGHT + 50), fill="white")
+        draw.text((15, config.TOP_BAR_HEIGHT + 15), self.text + "|", font=self.font, fill="black")
         
-        start_y = 60
+        start_y = config.TOP_BAR_HEIGHT + 60
         key_width = config.DISPLAY_WIDTH // 10
         key_height = 30
         

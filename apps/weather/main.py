@@ -81,7 +81,7 @@ class App:
             
             # Draw
             # City
-            draw.text((20, 20), city, fill=config.COLOR_ACCENT)
+            draw.text((20, 20 + config.TOP_BAR_HEIGHT), city, fill=config.COLOR_ACCENT)
             
             # Temp (Large)
             unit = "C" if config.OWM_UNITS == "metric" else "F"
@@ -90,7 +90,7 @@ class App:
             # We don't have a huge font loaded in UI, but we can try default large
             # Or draw it manually/pixelated?
             # Let's just use the standard large font for now.
-            draw.text((20, 60), temp_str, fill="white", font=None) # Default font is small
+            draw.text((20, 60 + config.TOP_BAR_HEIGHT), temp_str, fill="white", font=None) # Default font is small
             # To make it bigger without loading a new font file (which might fail), 
             # we can't easily do it with default PIL font.
             # But we have `core.ui.load_font`. We can't access it easily here without importing UI.
@@ -99,18 +99,18 @@ class App:
             font_huge = load_font(60, bold=True)
             font_large = load_font(24)
             
-            draw.text((20, 50), temp_str, font=font_huge, fill="white")
+            draw.text((20, 50 + config.TOP_BAR_HEIGHT), temp_str, font=font_huge, fill="white")
             
             # Condition
-            draw.text((20, 130), desc, font=font_large, fill=config.COLOR_ACCENT)
+            draw.text((20, 130 + config.TOP_BAR_HEIGHT), desc, font=font_large, fill=config.COLOR_ACCENT)
             
             # Details
-            draw.text((20, 180), f"Humidity: {humidity}%", fill="gray")
-            draw.text((20, 210), f"Wind: {wind} m/s", fill="gray")
+            draw.text((20, 180 + config.TOP_BAR_HEIGHT), f"Humidity: {humidity}%", fill="gray")
+            draw.text((20, 210 + config.TOP_BAR_HEIGHT), f"Wind: {wind} m/s", fill="gray")
             
             # Last Update
             t_str = time.strftime("%H:%M", time.localtime(self.last_update))
-            draw.text((20, 280), f"Updated: {t_str}", fill="gray")
+            draw.text((20, 280 + config.TOP_BAR_HEIGHT), f"Updated: {t_str}", fill="gray")
 
     def handle_input(self, event):
         if event == 'back':

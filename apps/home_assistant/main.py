@@ -110,7 +110,7 @@ class App:
         cell_w = (config.DISPLAY_WIDTH - (margin * 2) - (spacing * (self.cols - 1))) // self.cols
         cell_h = 90
         
-        start_y = 10
+        start_y = 10 + config.TOP_BAR_HEIGHT
         
         # Adjust scroll
         current_row = self.selected_index // self.cols
