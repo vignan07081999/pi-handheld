@@ -10,16 +10,31 @@ class App:
         self.display = display
         self.input = input_manager
         self.running = True
-        self.state = "menu"
+        self.state = "menu_difficulty" # menu_difficulty, menu_points, game
         
-        self.menu = Menu([
+        self.difficulty = "Medium"
+        self.ai_speed_factor = 1.0
+        
+        self.menu_difficulty = Menu([
+            {'label': 'Easy', 'action': lambda: self.set_difficulty('Easy', 0.6)},
+            {'label': 'Medium', 'action': lambda: self.set_difficulty('Medium', 1.0)},
+            {'label': 'Hard', 'action': lambda: self.set_difficulty('Hard', 1.5)},
+            {'label': 'Impossible', 'action': lambda: self.set_difficulty('Impossible', 2.5)}
+        ], title="Difficulty")
+        
+        self.menu_points = Menu([
             {'label': '3 Points', 'action': lambda: self.start_game(3)},
             {'label': '5 Points', 'action': lambda: self.start_game(5)},
             {'label': '10 Points', 'action': lambda: self.start_game(10)}
-        ], title="Pong Points")
+        ], title="Points")
         
         self.win_score = 5
         self.reset_game()
+
+    def set_difficulty(self, name, factor):
+        self.difficulty = name
+        self.ai_speed_factor = factor
+        self.state = "menu_points"
 
     def start_game(self, points):
         self.win_score = points
@@ -56,8 +71,11 @@ class App:
         self.player_x = max(0, min(config.DISPLAY_WIDTH - self.paddle_w, self.player_x))
 
     def update(self):
-        if self.state == "menu":
-            self.menu.update()
+        if self.state == "menu_difficulty":
+            self.menu_difficulty.update()
+            return
+        elif self.state == "menu_points":
+            self.menu_points.update()
             return
 
         if self.game_over:
@@ -95,9 +113,13 @@ class App:
             self.score_player += 1
             self._reset_ball()
             
-        # AI Logic (Simple Tracking)
+        # AI Logic (Tracking with Speed Limit based on Difficulty)
         target_x = self.ball_pos[0] - self.paddle_w / 2
-        ai_speed = 3 * self.current_speed_mult
+        
+        # Base AI speed is 3.0 * speed_mult
+        # Apply difficulty factor
+        ai_speed = 3.0 * self.current_speed_mult * self.ai_speed_factor
+        
         if self.ai_x < target_x:
             self.ai_x += ai_speed
         elif self.ai_x > target_x:
@@ -118,8 +140,11 @@ class App:
         draw = self.display.get_draw()
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
         
-        if self.state == "menu":
-            self.menu.draw(draw)
+        if self.state == "menu_difficulty":
+            self.menu_difficulty.draw(draw, self.display.get_image())
+            return
+        elif self.state == "menu_points":
+            self.menu_points.draw(draw, self.display.get_image())
             return
 
         if not self.game_over:
@@ -143,21 +168,27 @@ class App:
             draw.text((60, 260), "Hold Back to Exit", fill=(100, 100, 100))
 
     def handle_input(self, event):
-        if self.state == "menu":
-            if event == 'left': self.menu.move_selection(-1)
-            elif event == 'right': self.menu.move_selection(1)
-            elif event == 'select': self.menu.select_current()
+        if self.state == "menu_difficulty":
+            if event == 'left': self.menu_difficulty.move_selection(-1)
+            elif event == 'right': self.menu_difficulty.move_selection(1)
+            elif event == 'select': self.menu_difficulty.select_current()
             elif event == 'back': return False # Exit App
+            
+        elif self.state == "menu_points":
+            if event == 'left': self.menu_points.move_selection(-1)
+            elif event == 'right': self.menu_points.move_selection(1)
+            elif event == 'select': self.menu_points.select_current()
+            elif event == 'back': self.state = "menu_difficulty" # Back to difficulty
             
         elif self.state == "game":
             if event == 'left': self.move_player(-20) # Move Left
             elif event == 'right': self.move_player(20) # Move Right
             elif event == 'back': 
-                self.state = "menu" # Back to menu
+                self.state = "menu_difficulty" # Back to menu
                 return True
                 
         elif self.game_over:
-            if event == 'select': self.state = "menu"
+            if event == 'select': self.state = "menu_difficulty"
             elif event == 'back': return False
         
         return True # Default consumed

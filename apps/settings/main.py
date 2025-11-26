@@ -129,11 +129,11 @@ class App:
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
         
         if self.mode == 'menu':
-            self.main_menu.draw(draw)
+            self.main_menu.draw(draw, self.display.get_image())
             
         elif self.mode == 'wifi_scan':
             if hasattr(self, 'wifi_menu'):
-                self.wifi_menu.draw(draw)
+                self.wifi_menu.draw(draw, self.display.get_image())
             else:
                 draw.text((80, 140), "Scanning...", fill=config.COLOR_TEXT)
                 

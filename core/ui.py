@@ -59,15 +59,10 @@ class Menu:
         else:
             self.scroll_offset = self.target_scroll_offset
 
-    def draw(self, draw):
+    def draw(self, draw, target_image=None):
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
         
         # Draw Carousel Items
-        # We draw the current, previous, and next items for smooth scrolling
-        
-        # Calculate visible range based on scroll_offset
-        # Each item is DISPLAY_WIDTH wide
-        
         for i, item in enumerate(self.items):
             x = (i * config.DISPLAY_WIDTH) - self.scroll_offset
             
@@ -75,20 +70,11 @@ class Menu:
             if x < -config.DISPLAY_WIDTH or x > config.DISPLAY_WIDTH:
                 continue
                 
-            # Draw Card Background
-            # Scale down slightly to show edges of neighbors?
-            # Or full screen? User said "each app occupies the entire screen".
-            # But "left-right-left scrolling" implies seeing neighbors?
-            # Let's add a small margin.
             margin = 10
             card_x = x + margin
             card_y = margin
             card_w = config.DISPLAY_WIDTH - 2 * margin
             card_h = config.DISPLAY_HEIGHT - 2 * margin
-            
-            # Highlight if selected (though selection is centered)
-            # Actually, selection is always the one in center (closest to offset)
-            # But we track selected_index.
             
             is_selected = (i == self.selected_index)
             bg_color = (30, 30, 30) if not is_selected else (50, 50, 50)
@@ -99,7 +85,7 @@ class Menu:
             # Draw Icon
             icon_center_x = card_x + card_w // 2
             icon_center_y = card_y + card_h // 2 - 20
-            self._draw_icon(draw, item['label'], icon_center_x, icon_center_y)
+            self._draw_icon(draw, item['label'], icon_center_x, icon_center_y, target_image)
             
             # Draw Label
             label = item['label']
@@ -107,8 +93,24 @@ class Menu:
             text_w = bbox[2] - bbox[0]
             draw.text((icon_center_x - text_w // 2, card_y + card_h - 40), label, font=self.title_font, fill=config.COLOR_TEXT)
 
-    def _draw_icon(self, draw, name, cx, cy):
-        # Simple procedural icons
+    def _draw_icon(self, draw, name, cx, cy, target_image=None):
+        # Check for custom icon first
+        import os
+        icon_name = name.lower().replace(" ", "_")
+        icon_path = f"assets/icons/{icon_name}.png"
+        
+        if os.path.exists(icon_path) and target_image:
+            try:
+                icon = Image.open(icon_path).convert("RGBA")
+                icon.thumbnail((60, 60))
+                w, h = icon.size
+                # Paste centered
+                target_image.paste(icon, (int(cx - w/2), int(cy - h/2)), icon)
+                return
+            except Exception as e:
+                print(f"Error loading icon {icon_path}: {e}")
+
+        # Fallback to procedural icons
         name = name.lower()
         color = config.COLOR_ACCENT
         

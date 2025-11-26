@@ -118,7 +118,7 @@ class AppManager:
                     self.close_current_app()
             else:
                 self.main_menu.update()
-                self.main_menu.draw(self.display.get_draw())
+                self.main_menu.draw(self.display.get_draw(), self.display.get_image())
             
             self.display.show()
             time.sleep(0.03)

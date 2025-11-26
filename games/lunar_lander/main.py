@@ -13,25 +13,37 @@ class App:
         self.game_over = False
         self.score = 0
         
+        self.level = 1
         self.reset_game()
 
     def reset_game(self):
+        self.level = 1
+        self.score = 0
+        self.reset_level()
+
+    def reset_level(self):
         self.x = config.DISPLAY_WIDTH // 2
         self.y = 20
         self.vx = 0
         self.vy = 0
         self.angle = 0 # Degrees. 0 is Up.
         self.fuel = 100
-        self.gravity = 0.05
+        
+        # Difficulty increases with level
+        self.gravity = 0.05 + (self.level - 1) * 0.01
         self.thrust_power = 0.15
+        
         self.landed = False
         self.crashed = False
         self.game_over = False
         
         # Terrain
-        self.pad_x = random.randint(20, config.DISPLAY_WIDTH - 60)
-        self.pad_w = 40
+        self.pad_w = max(15, 40 - (self.level - 1) * 5)
+        self.pad_x = random.randint(20, config.DISPLAY_WIDTH - self.pad_w - 20)
         self.pad_y = config.DISPLAY_HEIGHT - 20
+        
+        self.last_input = None
+        self.last_input_time = 0
 
     def update(self):
         if self.game_over: return
@@ -52,7 +64,7 @@ class App:
                 abs(self.vy) < 2.0 and abs(self.vx) < 1.0 and abs(self.angle) < 15):
                 self.landed = True
                 self.game_over = True
-                self.score = int(self.fuel * 10)
+                self.score += int(self.fuel * 10) * self.level
                 highscore.save_highscore('lander', self.score)
             else:
                 self.crashed = True
@@ -70,11 +82,6 @@ class App:
         
         if not self.game_over:
             # Draw Lander
-            # Triangle shape rotated
-            # Tip
-            rad = math.radians(self.angle - 90) # -90 because 0 is Up (which is -Y)
-            # Wait, standard math: 0 is Right. -90 is Up.
-            # Let's say Angle 0 is Up.
             rad = math.radians(self.angle - 90)
             
             tip_x = self.x + 10 * math.cos(rad)
@@ -90,52 +97,50 @@ class App:
             
             draw.polygon([(tip_x, tip_y), (left_x, left_y), (right_x, right_y)], fill="white", outline="white")
             
-            # Draw Flame if thrusting (visual only, logic handled in input)
-            # We don't have 'is_thrusting' state easily unless we track button hold.
-            # InputManager triggers 'select' on release usually?
-            # Ah, for thrust we need HOLD or REPEATED press.
-            # The user said "Button selects...".
-            # For Lander, we need continuous thrust.
-            # InputManager has `when_held`.
-            # But `when_held` triggers 'back'.
-            # This is a conflict.
-            # User said "Button to accelerate/brake" for Racing.
-            # For Lander: "Button: Thrust".
-            # If Button Hold = Back, we can't use it for Thrust.
-            # UNLESS we override it in the App.
-            # But AppManager routes inputs.
-            # We can use 'select' (click) for short bursts?
-            # Or we can reconfigure InputManager?
-            # Let's use 'select' for bursts of thrust.
-            
             # HUD
             draw.text((10, 10), f"FUEL: {int(self.fuel)}", fill="white")
             draw.text((10, 25), f"ALT: {int(self.pad_y - self.y)}", fill="white")
-            draw.text((config.DISPLAY_WIDTH - 60, 10), f"VX: {self.vx:.1f}", fill="white")
+            draw.text((config.DISPLAY_WIDTH - 60, 10), f"LVL: {self.level}", fill="white")
             draw.text((config.DISPLAY_WIDTH - 60, 25), f"VY: {self.vy:.1f}", fill="white")
+            
+            # Debug Input
+            if self.last_input and time.time() - self.last_input_time < 0.5:
+                draw.text((config.DISPLAY_WIDTH // 2, 50), self.last_input, fill="yellow")
             
         else:
             if self.landed:
                 draw.text((60, 100), "SUCCESS!", fill="green")
                 draw.text((70, 140), f"Score: {self.score}", fill="white")
+                draw.text((50, 240), "Press Select for Next Level", fill=(100, 100, 100))
             else:
                 draw.text((60, 100), "CRASHED!", fill="red")
+                draw.text((70, 140), f"Score: {self.score}", fill="white")
+                draw.text((50, 240), "Press Select to Restart", fill=(100, 100, 100))
                 
-            draw.text((50, 240), "Press Select to Restart", fill=(100, 100, 100))
             draw.text((60, 260), "Hold Back to Exit", fill=(100, 100, 100))
 
     def handle_input(self, event):
         if self.game_over:
             if event == 'select':
-                self.reset_game()
+                if self.landed:
+                    self.level += 1
+                    self.reset_level()
+                else:
+                    self.reset_game()
             elif event == 'back':
                 return False
             return True
 
         if event == 'left':
             self.angle -= 10
+            self.last_input = "LEFT"
+            self.last_input_time = time.time()
+            print(f"DEBUG: Lander Left. Angle: {self.angle}")
         elif event == 'right':
             self.angle += 10
+            self.last_input = "RIGHT"
+            self.last_input_time = time.time()
+            print(f"DEBUG: Lander Right. Angle: {self.angle}")
         elif event == 'select':
             # Thrust Burst
             if self.fuel > 0:
@@ -143,6 +148,8 @@ class App:
                 rad = math.radians(self.angle - 90)
                 self.vx += self.thrust_power * math.cos(rad) * 5 # Burst multiplier
                 self.vy += self.thrust_power * math.sin(rad) * 5
+                self.last_input = "THRUST"
+                self.last_input_time = time.time()
         elif event == 'back':
             return False
             

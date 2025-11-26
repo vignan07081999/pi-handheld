@@ -16,19 +16,27 @@ class App:
         self.paddle_h = 10
         self.ball_size = 8
         
+        self.level = 1
         self.reset_game()
 
     def reset_game(self):
+        self.level = 1
+        self.score = 0
+        self.reset_level()
+
+    def reset_level(self):
         self.paddle_x = (config.DISPLAY_WIDTH - self.paddle_w) // 2
         self.ball_pos = [config.DISPLAY_WIDTH // 2, config.DISPLAY_HEIGHT // 2]
-        self.ball_vel = [4, -4] # Start moving up
+        
+        # Speed increases with level
+        speed = 4 + (self.level - 1) * 0.5
+        self.ball_vel = [speed, -speed]
         
         self.game_over = False
-        self.score = 0
         
         # Generate Bricks
         self.bricks = []
-        rows = 5
+        rows = 5 + (self.level // 2) # Add rows every 2 levels
         cols = 8
         brick_w = config.DISPLAY_WIDTH // cols
         brick_h = 15
@@ -76,7 +84,13 @@ class App:
             self.ball_vel[1] *= -1
             # Add some English based on hit position
             hit_pos = (self.ball_pos[0] - self.paddle_x) / self.paddle_w
-            self.ball_vel[0] = (hit_pos - 0.5) * 10 # -5 to 5
+            speed = math.hypot(self.ball_vel[0], self.ball_vel[1])
+            angle_factor = (hit_pos - 0.5) * 2 # -1 to 1
+            self.ball_vel[0] = angle_factor * speed * 0.8
+            # Normalize speed
+            current_speed = math.hypot(self.ball_vel[0], self.ball_vel[1])
+            self.ball_vel[0] *= (speed / current_speed)
+            self.ball_vel[1] *= (speed / current_speed)
             
         # Brick Collision
         ball_rect = [self.ball_pos[0], self.ball_pos[1], self.ball_pos[0] + self.ball_size, self.ball_pos[1] + self.ball_size]
@@ -95,10 +109,10 @@ class App:
             self.game_over = True
             highscore.save_highscore('breakout', self.score)
             
-        # Win Condition
+        # Win Condition (Level Up)
         if all(not b['active'] for b in self.bricks):
-            self.game_over = True
-            # Level up? For now just game over win.
+            self.level += 1
+            self.reset_level()
 
     def draw(self):
         draw = self.display.get_draw()
@@ -118,9 +132,9 @@ class App:
                     
             # Score
             draw.text((10, 10), f"Score: {self.score}", fill="white")
+            draw.text((config.DISPLAY_WIDTH - 60, 10), f"Level: {self.level}", fill="white")
         else:
-            res = "YOU WIN" if all(not b['active'] for b in self.bricks) else "GAME OVER"
-            draw.text((80, 100), res, fill=config.COLOR_WARNING)
+            draw.text((60, 100), "GAME OVER", fill=config.COLOR_WARNING)
             draw.text((70, 140), f"Score: {self.score}", fill=config.COLOR_TEXT)
             draw.text((50, 240), "Press Select to Restart", fill=(100, 100, 100))
             draw.text((60, 260), "Hold Back to Exit", fill=(100, 100, 100))

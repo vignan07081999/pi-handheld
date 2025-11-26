@@ -27,6 +27,11 @@ class App:
         self.obstacles = []
         self.next_obstacle_z = 500
         
+        # Level System
+        self.level = 1
+        self.next_level_score = 50
+        self.level_up_timer = 0
+        
         self.reset_game()
 
     def reset_game(self):
@@ -40,6 +45,11 @@ class App:
         self.curvature = 0
         self.target_curvature = 0
         self.start_time = time.time()
+        
+        self.level = 1
+        self.next_level_score = 50
+        self.max_speed = 100
+        self.level_up_timer = 0
 
     def update(self):
         if self.game_over: return
@@ -52,10 +62,22 @@ class App:
         self.track_pos += self.speed
         self.score = int(self.track_pos / 100)
         
+        # Level Up Logic
+        if self.score >= self.next_level_score:
+            self.level += 1
+            self.next_level_score += 50
+            self.max_speed += 20
+            self.level_up_timer = 60 # Show message for 60 frames
+            
+        if self.level_up_timer > 0:
+            self.level_up_timer -= 1
+        
         # Handle Curvature
         self.curve_timer += 1
         if self.curve_timer > 200: # Change curve every few seconds
-            self.target_curvature = random.uniform(-2, 2)
+            # Curvature increases with level
+            intensity = 2 + (self.level * 0.5)
+            self.target_curvature = random.uniform(-intensity, intensity)
             self.curve_timer = 0
             
         # Smoothly interpolate curvature
@@ -71,19 +93,14 @@ class App:
         if self.track_pos > self.next_obstacle_z:
             lane = random.choice([-0.6, 0, 0.6])
             self.obstacles.append({'z': self.track_pos + 2000, 'x': lane})
-            self.next_obstacle_z += random.randint(500, 1500)
+            # Obstacles get closer with level
+            gap = max(300, 1500 - (self.level * 100))
+            self.next_obstacle_z += random.randint(300, gap)
             
         # Clean Obstacles
         self.obstacles = [o for o in self.obstacles if o['z'] > self.track_pos - 100]
         
         # Check Collisions
-        player_z = self.track_pos + 100 # Player is effectively at z=100 relative to camera? 
-        # Actually, let's say camera is at track_pos, player is at track_pos + offset.
-        # Let's simplify: World Z coordinates.
-        # Camera is at self.track_pos.
-        # Player is fixed on screen, but logically at self.track_pos.
-        # Obstacles are at absolute Z.
-        
         for o in self.obstacles:
             # Check if obstacle is close to player in Z
             dist_z = o['z'] - self.track_pos
@@ -103,28 +120,10 @@ class App:
         
         if not self.game_over:
             # Draw Road (Pseudo-3D)
-            # Project segments
-            # We draw from back to front? No, front to back is easier for painters algo? 
-            # Actually back to front is better to overlay.
-            
-            # Horizon Y
             horizon_y = config.DISPLAY_HEIGHT // 2
-            
-            # Draw Road Segments
-            # We simulate strips.
-            # Z distance from camera.
-            # y = horizon_y + (screen_height / z) * scale
-            # w = (road_width / z) * scale
-            
-            # We'll draw 10 segments
             num_segments = 20
             draw_dist = 2000
-            
-            # Current segment offset
             segment_offset = self.track_pos % 100
-            
-            # Accumulate X offset for curvature
-            dx = 0
             
             for i in range(num_segments, 0, -1):
                 z = i * (draw_dist / num_segments) - segment_offset
@@ -134,8 +133,6 @@ class App:
                 scale = 150 / z
                 
                 # Curvature effect on X
-                # dx += self.curvature * (z / 1000) # Simple skew
-                # Actually, curvature accumulates with Z
                 curve_x = self.curvature * (z * z) / 100000
                 
                 screen_y = horizon_y + 4000 / z
@@ -144,26 +141,13 @@ class App:
                 
                 # Alternate colors
                 color = (105, 105, 105) if ((self.track_pos + z) // 200) % 2 == 0 else (128, 128, 128)
-                grass_color = (34, 139, 34) if ((self.track_pos + z) // 200) % 2 == 0 else (50, 205, 50)
                 
-                # Draw Grass Strip (Full width)
-                # draw.rectangle((0, screen_y, config.DISPLAY_WIDTH, screen_y + 10), fill=grass_color)
-                
-                # Draw Road Strip
-                # We need trapezoids.
-                # Calculate next (closer) segment for trapezoid
-                # But simple rectangles work for retro feel if dense enough.
-                # Let's use lines or rects.
-                
-                # Better: Calculate Top and Bottom of segment
+                # Calculate Top and Bottom of segment
                 z_far = z + 100
                 z_near = z
                 
                 y_far = horizon_y + 4000 / z_far
                 y_near = horizon_y + 4000 / z_near
-                
-                scale_far = 150 / z_far
-                scale_near = 150 / z_near
                 
                 w_far = 20000 / z_far
                 w_near = 20000 / z_near
@@ -202,7 +186,6 @@ class App:
                 ], fill=rumble_color)
 
             # Draw Obstacles (Painters algo: Back to Front)
-            # Sort obstacles by Z (descending)
             sorted_obstacles = sorted(self.obstacles, key=lambda o: o['z'], reverse=True)
             for o in sorted_obstacles:
                 z = o['z'] - self.track_pos
@@ -223,18 +206,9 @@ class App:
                 )
 
             # Draw Player Car
-            # Fixed at bottom center (visually), but moves relative to road via player_x
-            # Actually, we move the road (camera), so player is visually center?
-            # No, user asked for "cart is controller using the knob".
-            # Usually in these games, the car moves Left/Right on screen.
-            
             car_y = config.DISPLAY_HEIGHT - 30
             car_w = 40
             car_h = 20
-            
-            # Player X on screen
-            # 0 -> Center. -1 -> Left Edge of Road.
-            # Road width at bottom is approx display width.
             player_screen_x = config.DISPLAY_WIDTH // 2 + self.player_x * (config.DISPLAY_WIDTH // 2)
             
             draw.rectangle(
@@ -249,7 +223,12 @@ class App:
             # HUD
             draw.text((10, 10), f"SCORE: {self.score}", fill="white")
             draw.text((10, 30), f"SPEED: {int(self.speed)}", fill="white")
+            draw.text((config.DISPLAY_WIDTH - 80, 10), f"LEVEL: {self.level}", fill="yellow")
             
+            if self.level_up_timer > 0:
+                if (self.level_up_timer // 5) % 2 == 0: # Blink
+                    draw.text((config.DISPLAY_WIDTH // 2 - 40, 100), "LEVEL UP!", fill="yellow", font=None) # Need large font but don't have access to Menu font easily. Default is fine.
+
         else:
             draw.text((60, 100), "GAME OVER", fill=config.COLOR_WARNING)
             draw.text((70, 140), f"Score: {self.score}", fill=config.COLOR_TEXT)
@@ -266,10 +245,8 @@ class App:
 
         if event == 'left':
             self.player_x -= 0.2
-            # print(f"DEBUG: Left. Pos: {self.player_x}")
         elif event == 'right':
             self.player_x += 0.2
-            # print(f"DEBUG: Right. Pos: {self.player_x}")
         elif event == 'back':
             return False
             

@@ -12,9 +12,15 @@ class App:
         self.game_over = False
         self.score = 0
         
+        self.wave = 1
         self.reset_game()
 
     def reset_game(self):
+        self.wave = 1
+        self.score = 0
+        self.reset_wave()
+
+    def reset_wave(self):
         self.player_x = config.DISPLAY_WIDTH // 2
         self.player_y = config.DISPLAY_HEIGHT - 20
         self.player_w = 20
@@ -27,12 +33,16 @@ class App:
         self.alien_w = 15
         self.alien_h = 10
         self.alien_dir = 1 # 1: Right, -1: Left
-        self.alien_speed = 2
-        self.alien_drop_timer = 0
+        
+        # Difficulty increases with wave
+        self.alien_speed = 2 + (self.wave - 1) * 0.5
         
         # Spawn Aliens
         start_x = 20
-        start_y = 30
+        # Start lower each wave
+        start_y = 30 + (self.wave - 1) * 5
+        start_y = min(start_y, 100) # Cap start height
+        
         for r in range(self.alien_rows):
             for c in range(self.alien_cols):
                 self.aliens.append({
@@ -42,7 +52,6 @@ class App:
                 })
         
         self.game_over = False
-        self.score = 0
         self.win = False
 
     def update(self):
@@ -56,8 +65,15 @@ class App:
         # Move Aliens
         move_down = False
         # Check edges
-        left_edge = min(a['x'] for a in self.aliens if a['active']) if any(a['active'] for a in self.aliens) else 0
-        right_edge = max(a['x'] + self.alien_w for a in self.aliens if a['active']) if any(a['active'] for a in self.aliens) else 0
+        active_aliens = [a for a in self.aliens if a['active']]
+        if not active_aliens:
+            # Wave Cleared
+            self.wave += 1
+            self.reset_wave()
+            return
+
+        left_edge = min(a['x'] for a in active_aliens)
+        right_edge = max(a['x'] + self.alien_w for a in active_aliens)
         
         if right_edge >= config.DISPLAY_WIDTH - 5 and self.alien_dir == 1:
             self.alien_dir = -1
@@ -73,6 +89,7 @@ class App:
                     a['y'] += 10
                     if a['y'] + self.alien_h >= self.player_y:
                         self.game_over = True # Aliens reached player
+                        highscore.save_highscore('space_invaders', self.score)
                         
         # Collision: Bullet vs Alien
         for b in self.bullets:
@@ -83,14 +100,8 @@ class App:
                         a['active'] = False
                         b['y'] = -10 # Remove bullet
                         self.score += 10
-                        # Increase speed slightly?
-                        pass
                         
-        # Win Condition
-        if all(not a['active'] for a in self.aliens):
-            self.game_over = True
-            self.win = True
-            highscore.save_highscore('space_invaders', self.score)
+        # Game Over if no aliens left handled above (Wave Clear)
 
     def draw(self):
         draw = self.display.get_draw()
@@ -113,9 +124,9 @@ class App:
                 
             # Score
             draw.text((10, 10), f"SCORE: {self.score}", fill="white")
+            draw.text((config.DISPLAY_WIDTH - 60, 10), f"WAVE: {self.wave}", fill="white")
         else:
-            res = "YOU WIN" if self.win else "GAME OVER"
-            draw.text((80, 100), res, fill=config.COLOR_WARNING)
+            draw.text((60, 100), "GAME OVER", fill=config.COLOR_WARNING)
             draw.text((70, 140), f"Score: {self.score}", fill=config.COLOR_TEXT)
             draw.text((50, 240), "Press Select to Restart", fill=(100, 100, 100))
             draw.text((60, 260), "Hold Back to Exit", fill=(100, 100, 100))
