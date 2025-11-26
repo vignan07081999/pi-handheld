@@ -46,8 +46,14 @@ def main():
     parser.add_argument('--sim', action='store_true', help='Run in simulation mode on PC')
     args = parser.parse_args()
 
-    logger.info("Starting Pi Handheld OS...")
-    
+    logger.info(f"Python: {sys.executable}")
+    try:
+        import gpiozero.pins.data
+        from gpiozero import Device
+        logger.info(f"GPIOZero Pin Factory: {Device.pin_factory}")
+    except Exception as e:
+        logger.info(f"GPIOZero Factory Error: {e}")
+
     # Initialize Core Systems
     display = DisplayManager(simulate=args.sim)
     
@@ -57,6 +63,11 @@ def main():
         args.sim = True
 
     haptic = HapticManager(simulate=args.sim)
+    
+    # Test Haptic on Boot
+    print("Testing Haptic...")
+    haptic.vibrate(0.5)
+    
     input_manager = InputManager(simulate=args.sim)
     
     # Bind Haptics to Input Events
