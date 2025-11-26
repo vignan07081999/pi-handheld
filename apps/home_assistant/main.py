@@ -95,7 +95,7 @@ class App:
             draw.text((20, 140), self.error, fill=config.COLOR_WARNING)
             draw.text((20, 160), "Check config.py", fill=config.COLOR_TEXT)
         elif self.menu:
-            self.menu.draw(draw)
+            self.menu.draw(draw, self.display.get_image())
 
     def handle_input(self, event):
         if self.loading:

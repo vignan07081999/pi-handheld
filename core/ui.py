@@ -21,22 +21,37 @@ def load_font(size, bold=False):
     print(f"Warning: No fonts found. Using default.")
     return ImageFont.load_default()
 
-class Menu:
+class BaseMenu:
     def __init__(self, items, title="Menu"):
         self.items = items 
         self.title = title
         self.selected_index = 0
+        self.font = load_font(config.FONT_SIZE_NORMAL)
+        self.title_font = load_font(config.FONT_SIZE_TITLE - 4, bold=True) # Smaller title
+
+    def move_selection(self, delta):
+        self.selected_index = (self.selected_index + delta) % len(self.items)
+
+    def select_current(self):
+        item = self.items[self.selected_index]
+        if 'action' in item and item['action']:
+            item['action']()
+
+    def update(self):
+        pass
+
+    def draw(self, draw, target_image=None):
+        pass
+
+class CarouselMenu(BaseMenu):
+    def __init__(self, items, title="Menu"):
+        super().__init__(items, title)
         self.scroll_offset = 0
         self.target_scroll_offset = 0
-        
-        self.font = load_font(config.FONT_SIZE_NORMAL)
-        self.title_font = load_font(config.FONT_SIZE_TITLE, bold=True)
+        self.scroll_accumulator = 0
 
     def move_selection(self, delta):
         # Accumulate steps to prevent too fast scrolling
-        if not hasattr(self, 'scroll_accumulator'):
-            self.scroll_accumulator = 0
-            
         self.scroll_accumulator += delta
         
         # Only move every 2 steps
@@ -46,11 +61,6 @@ class Menu:
             
             self.selected_index = (self.selected_index + move_dir) % len(self.items)
             self.target_scroll_offset = self.selected_index * config.DISPLAY_WIDTH
-
-    def select_current(self):
-        item = self.items[self.selected_index]
-        if 'action' in item and item['action']:
-            item['action']()
 
     def update(self):
         diff = self.target_scroll_offset - self.scroll_offset
@@ -97,53 +107,18 @@ class Menu:
             
             # Marquee if selected and too long
             if is_selected and text_w > card_w - 20:
-                # Scroll based on time
                 t = time.time()
-                scroll_speed = 50 # pixels per second
-                scroll_dist = text_w - (card_w - 20) + 50 # +50 for pause/gap
-                
-                offset = (t * scroll_speed) % (scroll_dist * 2) # *2 for back and forth or loop?
-                # Let's do simple loop: Text moves left, then resets.
-                
-                # Better: Ping pong? Or just scroll left.
-                # Scroll left: x decreases.
-                
-                # Calculate offset
-                # We want to show the start, wait, scroll to end, wait.
-                period = scroll_dist / scroll_speed + 2 # +2s wait
+                scroll_speed = 50
+                scroll_dist = text_w - (card_w - 20) + 50
+                period = scroll_dist / scroll_speed + 2
                 phase = t % period
                 
-                if phase < 1: # Wait at start
-                    offset = 0
-                elif phase < period - 1: # Scroll
-                    offset = (phase - 1) * scroll_speed
-                else: # Wait at end
-                    offset = scroll_dist - 50 # Max scroll
+                if phase < 1: offset = 0
+                elif phase < period - 1: offset = (phase - 1) * scroll_speed
+                else: offset = scroll_dist - 50
                 
-                # Clip offset
                 offset = min(offset, text_w - (card_w - 20))
-                
-                # Draw with clip? PIL doesn't support clip rects easily on existing draw object.
-                # We can just draw it and let it overflow the card?
-                # The card background is drawn before.
-                # If we draw text outside card, it looks bad.
-                # We can clear the text area?
-                # Or just clamp x? No, that doesn't scroll.
-                
-                # Workaround: Create a temp image for the text line, crop it, and paste it.
-                # But we don't have easy paste access unless we use target_image.
-                # If target_image is None (simulation), we can't paste easily onto 'draw'.
-                
-                # Alternative: Just draw it. If it overflows the screen, it's fine (clipped by display).
-                # If it overflows the card but is on screen, it might look messy.
-                # But full screen menu -> card is basically full screen width.
-                # So overflow isn't a huge issue unless it hits neighbors.
-                # Neighbors are far away (DISPLAY_WIDTH).
-                
                 text_x = icon_center_x - (card_w - 20) // 2 - offset
-                
-                # Ensure we don't draw outside the card horizontally too much?
-                # Actually, since only one card is fully visible usually, it's fine.
                 
             elif not is_selected and text_w > card_w - 20:
                  # Truncate
@@ -166,7 +141,6 @@ class Menu:
                 icon = Image.open(icon_path).convert("RGBA")
                 icon.thumbnail((60, 60))
                 w, h = icon.size
-                # Paste centered
                 target_image.paste(icon, (int(cx - w/2), int(cy - h/2)), icon)
                 return
             except Exception as e:
@@ -177,44 +151,96 @@ class Menu:
         color = config.COLOR_ACCENT
         
         if "setting" in name:
-            # Gear
             draw.ellipse((cx-30, cy-30, cx+30, cy+30), outline=color, width=5)
             draw.ellipse((cx-10, cy-10, cx+10, cy+10), fill=color)
         elif "torch" in name:
-            # Lightbulb / Circle
             draw.ellipse((cx-25, cy-35, cx+25, cy+15), fill="yellow")
             draw.rectangle((cx-10, cy+15, cx+10, cy+35), fill="gray")
         elif "snake" in name:
-            # S shape
             draw.arc((cx-20, cy-30, cx+20, cy), 180, 0, fill="green", width=5)
             draw.arc((cx-20, cy, cx+20, cy+30), 0, 180, fill="green", width=5)
         elif "pong" in name:
-            # Paddles and Ball
             draw.rectangle((cx-30, cy-20, cx-25, cy+20), fill="white")
             draw.rectangle((cx+25, cy-20, cx+30, cy+20), fill="white")
             draw.ellipse((cx-5, cy-5, cx+5, cy+5), fill="white")
         elif "racing" in name:
-            # Car
             draw.rectangle((cx-20, cy-10, cx+20, cy+10), fill="red")
             draw.ellipse((cx-15, cy+5, cx-5, cy+15), fill="white")
             draw.ellipse((cx+5, cy+5, cx+15, cy+15), fill="white")
         elif "breakout" in name:
-            # Bricks
             draw.rectangle((cx-30, cy-30, cx+30, cy-10), fill="orange")
-            draw.rectangle((cx-10, cy+20, cx+10, cy+25), fill="white") # Paddle
-            draw.ellipse((cx-3, cy, cx+3, cy+6), fill="white") # Ball
+            draw.rectangle((cx-10, cy+20, cx+10, cy+25), fill="white")
+            draw.ellipse((cx-3, cy, cx+3, cy+6), fill="white")
         elif "lander" in name:
-            # Triangle
             draw.polygon([(cx, cy-20), (cx-20, cy+20), (cx+20, cy+20)], outline="white", width=3)
         elif "space" in name:
-            # Alien
             draw.rectangle((cx-20, cy-10, cx+20, cy+10), fill="green")
             draw.rectangle((cx-10, cy-20, cx+10, cy-10), fill="green")
             draw.rectangle((cx-25, cy+10, cx-15, cy+20), fill="green")
             draw.rectangle((cx+15, cy+10, cx+25, cy+20), fill="green")
+        elif "tools" in name:
+            # Wrench
+            draw.rectangle((cx-5, cy-20, cx+5, cy+10), fill="gray")
+            draw.rectangle((cx-15, cy-30, cx+15, cy-20), fill="gray")
+        elif "games" in name:
+            # Controller
+            draw.rectangle((cx-25, cy-15, cx+25, cy+15), fill="purple")
+            draw.ellipse((cx-15, cy, cx-5, cy+10), fill="black")
+            draw.ellipse((cx+5, cy-5, cx+15, cy+5), fill="black")
+        elif "apps" in name:
+            # Grid
+            draw.rectangle((cx-20, cy-20, cx-5, cy-5), fill="blue")
+            draw.rectangle((cx+5, cy-20, cx+20, cy-5), fill="blue")
+            draw.rectangle((cx-20, cy+5, cx-5, cy+20), fill="blue")
+            draw.rectangle((cx+5, cy+5, cx+20, cy+20), fill="blue")
         else:
-            # Default Box
             draw.rectangle((cx-20, cy-20, cx+20, cy+20), outline=color, width=2)
+
+class ListMenu(BaseMenu):
+    def __init__(self, items, title="Menu"):
+        super().__init__(items, title)
+        self.visible_items = 5
+        self.scroll_top = 0
+
+    def move_selection(self, delta):
+        self.selected_index = (self.selected_index + delta) % len(self.items)
+        
+        # Adjust scroll
+        if self.selected_index < self.scroll_top:
+            self.scroll_top = self.selected_index
+        elif self.selected_index >= self.scroll_top + self.visible_items:
+            self.scroll_top = self.selected_index - self.visible_items + 1
+
+    def draw(self, draw, target_image=None):
+        draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
+        
+        # Title
+        draw.rectangle((0, 0, config.DISPLAY_WIDTH, 40), fill=(30, 30, 30))
+        draw.text((10, 5), self.title, font=self.title_font, fill=config.COLOR_ACCENT)
+        
+        # Items
+        start_y = 50
+        item_h = 40
+        
+        for i in range(self.visible_items):
+            idx = self.scroll_top + i
+            if idx >= len(self.items): break
+            
+            item = self.items[idx]
+            y = start_y + i * item_h
+            
+            is_selected = (idx == self.selected_index)
+            
+            if is_selected:
+                draw.rectangle((5, y, config.DISPLAY_WIDTH - 5, y + item_h - 5), fill=config.COLOR_ACCENT)
+                text_color = "white"
+            else:
+                text_color = config.COLOR_TEXT
+                
+            draw.text((20, y + 5), item['label'], font=self.font, fill=text_color)
+
+# Alias for backward compatibility
+Menu = ListMenu
 
 class Keyboard:
     def __init__(self, on_done):
@@ -253,21 +279,14 @@ class Keyboard:
         self.selected_col = 0
 
     def move_selection(self, delta):
-        # Flatten navigation? Or Row/Col?
-        # With a knob, flat navigation is easier.
-        # Count total items
         total_items = sum(len(row) for row in self.current_layout)
-        
-        # Calculate current flat index
         current_flat = 0
         for r in range(self.selected_row):
             current_flat += len(self.current_layout[r])
         current_flat += self.selected_col
         
-        # Apply delta
         current_flat = (current_flat + delta) % total_items
         
-        # Convert back to Row/Col
         temp = 0
         for r, row in enumerate(self.current_layout):
             if current_flat < temp + len(row):
@@ -293,14 +312,10 @@ class Keyboard:
             self.text += key
 
     def draw(self, draw):
-        # Draw Background
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=(20, 20, 20))
-        
-        # Draw Text Input Area
         draw.rectangle((10, 10, config.DISPLAY_WIDTH - 10, 50), fill="white")
         draw.text((15, 15), self.text + "|", font=self.font, fill="black")
         
-        # Draw Keyboard Grid
         start_y = 60
         key_width = config.DISPLAY_WIDTH // 10
         key_height = 30
@@ -309,7 +324,6 @@ class Keyboard:
             row_width = len(row) * key_width
             start_x = (config.DISPLAY_WIDTH - row_width) // 2
             
-            # Special handling for last row (buttons)
             if r == len(self.current_layout) - 1:
                 key_width_special = config.DISPLAY_WIDTH // 4
                 start_x = 0
@@ -324,7 +338,6 @@ class Keyboard:
                 
                 y = start_y + r * key_height
                 
-                # Highlight Selection
                 if r == self.selected_row and c == self.selected_col:
                     draw.rectangle((x + 2, y + 2, x + w - 2, y + key_height - 2), fill=config.COLOR_ACCENT)
                     color = "white"
@@ -332,17 +345,11 @@ class Keyboard:
                     draw.rectangle((x + 2, y + 2, x + w - 2, y + key_height - 2), outline=(100, 100, 100))
                     color = (200, 200, 200)
                 
-                # Draw Key Label
-                # Center text
-                # Use simple centering estimation
                 font = self.font
-                if len(key) > 1: font = load_font(12) # Smaller for special keys
+                if len(key) > 1: font = load_font(12)
                 
-                # text_w, text_h = draw.textsize(key, font=font) # Deprecated
-                # Use bbox
                 bbox = draw.textbbox((0, 0), key, font=font)
                 text_w = bbox[2] - bbox[0]
                 text_h = bbox[3] - bbox[1]
                 
                 draw.text((x + (w - text_w) // 2, y + (key_height - text_h) // 2 - 2), key, font=font, fill=color)
-

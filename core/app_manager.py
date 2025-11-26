@@ -2,7 +2,7 @@ import os
 import sys
 import importlib
 import time
-from core.ui import Menu
+from core.ui import CarouselMenu, ListMenu
 import config
 
 class AppManager:
@@ -15,6 +15,8 @@ class AppManager:
         self.running = True
         
         self.main_menu = None
+        self.sub_menu = None # For categories
+        
         self._load_apps()
         self._create_main_menu()
 
@@ -44,26 +46,59 @@ class AppManager:
         return found
 
     def _create_main_menu(self):
+        # Categories
+        items = [
+            {'label': 'Games', 'action': lambda: self.open_category('Games')},
+            {'label': 'Tools', 'action': lambda: self.open_category('Tools')},
+            {'label': 'Apps', 'action': lambda: self.open_category('Apps')},
+            {'label': 'Settings', 'action': lambda: self.open_category('Settings')}
+        ]
+        
+        self.main_menu = CarouselMenu(items, title="Main Menu")
+
+    def open_category(self, category):
         items = []
         
-        # Apps Section
-        for app in self.apps:
-            items.append({
-                'label': app['name'],
-                'action': lambda a=app: self.launch_app(a)
-            })
+        if category == 'Games':
+            for game in self.games:
+                items.append({
+                    'label': game['name'],
+                    'action': lambda g=game: self.launch_app(g)
+                })
+        elif category == 'Tools':
+            # Filter tools from apps
+            tools = ['Torch', 'Measure']
+            for app in self.apps:
+                if app['name'] in tools:
+                    items.append({
+                        'label': app['name'],
+                        'action': lambda a=app: self.launch_app(a)
+                    })
+        elif category == 'Settings':
+            # Filter settings
+            for app in self.apps:
+                if app['name'] == 'Settings':
+                    items.append({
+                        'label': app['name'],
+                        'action': lambda a=app: self.launch_app(a)
+                    })
+        elif category == 'Apps':
+            # Everything else
+            tools = ['Torch', 'Measure', 'Settings']
+            for app in self.apps:
+                if app['name'] not in tools:
+                    items.append({
+                        'label': app['name'],
+                        'action': lambda a=app: self.launch_app(a)
+                    })
+                    
+        if not items:
+            items.append({'label': 'No Items', 'action': None})
             
-        # Games Section
-        for game in self.games:
-            items.append({
-                'label': f"Game: {game['name']}",
-                'action': lambda g=game: self.launch_app(g)
-            })
-            
-        # Settings (Built-in)
-        # items.append({'label': 'Settings', 'action': self.launch_settings})
-        
-        self.main_menu = Menu(items, title="Main Menu")
+        self.sub_menu = ListMenu(items, title=category)
+
+    def close_sub_menu(self):
+        self.sub_menu = None
 
     def launch_app(self, app_info):
         print(f"Launching {app_info['name']}...")
@@ -116,6 +151,9 @@ class AppManager:
                     import traceback
                     traceback.print_exc()
                     self.close_current_app()
+            elif self.sub_menu:
+                self.sub_menu.update()
+                self.sub_menu.draw(self.display.get_draw(), self.display.get_image())
             else:
                 self.main_menu.update()
                 self.main_menu.draw(self.display.get_draw(), self.display.get_image())
@@ -130,14 +168,14 @@ class AppManager:
                 handled = self.current_app.handle_input(event_name)
             
             if event_name == 'back' and not handled:
-                # Global Back Handler (only if app didn't consume it)
                 self.close_current_app()
+        elif self.sub_menu:
+            if event_name == 'left': self.sub_menu.move_selection(-1)
+            elif event_name == 'right': self.sub_menu.move_selection(1)
+            elif event_name == 'select': self.sub_menu.select_current()
+            elif event_name == 'back': self.close_sub_menu()
         else:
-            # Menu Navigation
-            if event_name == 'left':
-                self.main_menu.move_selection(-1)
-            elif event_name == 'right':
-                self.main_menu.move_selection(1)
-            elif event_name == 'select':
-                self.main_menu.select_current()
-
+            # Main Menu
+            if event_name == 'left': self.main_menu.move_selection(-1)
+            elif event_name == 'right': self.main_menu.move_selection(1)
+            elif event_name == 'select': self.main_menu.select_current()

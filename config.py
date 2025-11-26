@@ -54,5 +54,13 @@ HAPTIC_DURATION_LONG = 0.2
 # ==========================================
 # HOME ASSISTANT CONFIGURATION
 # ==========================================
-HA_URL = "http://homeassistant.local:8123" # or IP address
-HA_TOKEN = "YOUR_LONG_LIVED_ACCESS_TOKEN"
+HA_URL = "http://192.168.68.87:8123" # or IP address
+HA_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI3NGM5NDVmMDEwYzc0OGMzYmYyYmEwYjFmYWRkZTNhYSIsImlhdCI6MTc2NDE3ODYxMCwiZXhwIjoyMDc5NTM4NjEwfQ.5hrV3Lptc0CV4qtz74zBB28yqtV1RDCLQmgwViC_agk"
+
+# ==========================================
+# WEATHER CONFIGURATION (OpenWeatherMap)
+# ==========================================
+OWM_API_KEY = "2c5d6bd7405d3d0e285a5e7e35741191"
+OWM_LAT = "44.184418" # New York (Example)
+OWM_LON = "-77.403337"
+OWM_UNITS = "metric" # metric or imperial
