@@ -34,6 +34,225 @@ class BaseMenu:
 
     def select_current(self):
         item = self.items[self.selected_index]
+        if 'action' in item and item['action']:
+            item['action']()
+
+    def update(self):
+        pass
+
+    def draw(self, draw, target_image=None):
+        pass
+
+    def _draw_icon(self, draw, name, cx, cy, size=60, target_image=None):
+        # Check for custom icon first
+        import os
+        icon_name = name.lower().replace(" ", "_")
+        # Remove any leading icons from label (e.g. "[X] ")
+        if "]" in icon_name:
+            icon_name = icon_name.split("]")[-1].strip()
+            
+        icon_path = f"assets/icons/{icon_name}.png"
+        
+        if os.path.exists(icon_path) and target_image:
+            try:
+                icon = Image.open(icon_path).convert("RGBA")
+                icon.thumbnail((size, size))
+                w, h = icon.size
+                target_image.paste(icon, (int(cx - w/2), int(cy - h/2)), icon)
+                return
+            except Exception as e:
+                print(f"Error loading icon {icon_path}: {e}")
+
+        # Fallback to procedural icons
+        name = name.lower()
+        color = config.COLOR_ACCENT
+        
+        # Scale drawing based on size (assuming 60 is base)
+        s = size / 60.0
+        
+        if "setting" in name:
+            draw.ellipse((cx-30*s, cy-30*s, cx+30*s, cy+30*s), outline=color, width=int(5*s))
+            draw.ellipse((cx-10*s, cy-10*s, cx+10*s, cy+10*s), fill=color)
+        elif "torch" in name:
+            draw.ellipse((cx-25*s, cy-35*s, cx+25*s, cy+15*s), fill="yellow")
+            draw.rectangle((cx-10*s, cy+15*s, cx+10*s, cy+35*s), fill="gray")
+        elif "snake" in name:
+            draw.arc((cx-20*s, cy-30*s, cx+20*s, cy), 180, 0, fill="green", width=int(5*s))
+            draw.arc((cx-20*s, cy, cx+20*s, cy+30*s), 0, 180, fill="green", width=int(5*s))
+        elif "pong" in name:
+            draw.rectangle((cx-30*s, cy-20*s, cx-25*s, cy+20*s), fill="white")
+            draw.rectangle((cx+25*s, cy-20*s, cx+30*s, cy+20*s), fill="white")
+            draw.ellipse((cx-5*s, cy-5*s, cx+5*s, cy+5*s), fill="white")
+        elif "racing" in name:
+            draw.rectangle((cx-20*s, cy-10*s, cx+20*s, cy+10*s), fill="red")
+            draw.ellipse((cx-15*s, cy+5*s, cx-5*s, cy+15*s), fill="white")
+            draw.ellipse((cx+5*s, cy+5*s, cx+15*s, cy+15*s), fill="white")
+        elif "breakout" in name:
+            draw.rectangle((cx-30*s, cy-30*s, cx+30*s, cy-10*s), fill="orange")
+            draw.rectangle((cx-10*s, cy+20*s, cx+10*s, cy+25*s), fill="white")
+            draw.ellipse((cx-3*s, cy, cx+3*s, cy+6*s), fill="white")
+        elif "lander" in name:
+            draw.polygon([(cx, cy-20*s), (cx-20*s, cy+20*s), (cx+20*s, cy+20*s)], outline="white", width=int(3*s))
+        elif "space" in name:
+            draw.rectangle((cx-20*s, cy-10*s, cx+20*s, cy+10*s), fill="green")
+            draw.rectangle((cx-10*s, cy-20*s, cx+10*s, cy-10*s), fill="green")
+            draw.rectangle((cx-25*s, cy+10*s, cx-15*s, cy+20*s), fill="green")
+            draw.rectangle((cx+15*s, cy+10*s, cx+25*s, cy+20*s), fill="green")
+        elif "tools" in name:
+            draw.rectangle((cx-5*s, cy-20*s, cx+5*s, cy+10*s), fill="gray")
+            draw.rectangle((cx-15*s, cy-30*s, cx+15*s, cy-20*s), fill="gray")
+        elif "games" in name:
+            draw.rectangle((cx-25*s, cy-15*s, cx+25*s, cy+15*s), fill="purple")
+            draw.ellipse((cx-15*s, cy, cx-5*s, cy+10*s), fill="black")
+            draw.ellipse((cx+5*s, cy-5*s, cx+15*s, cy+5*s), fill="black")
+        elif "apps" in name:
+            draw.rectangle((cx-20*s, cy-20*s, cx-5*s, cy-5*s), fill="blue")
+            draw.rectangle((cx+5*s, cy-20*s, cx+20*s, cy-5*s), fill="blue")
+            draw.rectangle((cx-20*s, cy+5*s, cx-5*s, cy+20*s), fill="blue")
+            draw.rectangle((cx+5*s, cy+5*s, cx+20*s, cy+20*s), fill="blue")
+        else:
+            draw.rectangle((cx-20*s, cy-20*s, cx+20*s, cy+20*s), outline=color, width=int(2*s))
+
+class CarouselMenu(BaseMenu):
+    def __init__(self, items, title="Menu"):
+        super().__init__(items, title)
+        self.scroll_offset = 0
+        self.target_scroll_offset = 0
+        self.scroll_accumulator = 0
+
+    def move_selection(self, delta):
+        # Accumulate steps to prevent too fast scrolling
+        self.scroll_accumulator += delta
+        
+        # Only move every 2 steps
+        if abs(self.scroll_accumulator) >= 2:
+            move_dir = 1 if self.scroll_accumulator > 0 else -1
+            self.scroll_accumulator = 0 
+            
+            self.selected_index = (self.selected_index + move_dir) % len(self.items)
+            self.target_scroll_offset = self.selected_index * config.DISPLAY_WIDTH
+
+    def update(self):
+        # Snap to target (No animation for performance)
+        self.scroll_offset = self.target_scroll_offset
+
+    def draw(self, draw, target_image=None):
+        draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
+        
+        # Draw Carousel Items
+        for i, item in enumerate(self.items):
+            x = (i * config.DISPLAY_WIDTH) - self.scroll_offset
+            
+            # Optimization: Only draw if visible
+            if x < -config.DISPLAY_WIDTH or x > config.DISPLAY_WIDTH:
+                continue
+                
+            margin = 10
+            card_x = x + margin
+            card_y = margin
+            card_w = config.DISPLAY_WIDTH - 2 * margin
+            card_h = config.DISPLAY_HEIGHT - 2 * margin
+            
+            is_selected = (i == self.selected_index)
+            bg_color = (30, 30, 30) if not is_selected else (50, 50, 50)
+            outline_color = config.COLOR_ACCENT if is_selected else (100, 100, 100)
+            
+            draw.rectangle((card_x, card_y, card_x + card_w, card_y + card_h), fill=bg_color, outline=outline_color, width=3)
+            
+            # Draw Icon
+            icon_center_x = card_x + card_w // 2
+            icon_center_y = card_y + card_h // 2 - 20
+            self._draw_icon(draw, item['label'], icon_center_x, icon_center_y, size=60, target_image=target_image)
+            
+            # Draw Label
+            label = item['label']
+            bbox = draw.textbbox((0, 0), label, font=self.title_font)
+            text_w = bbox[2] - bbox[0]
+            
+            text_x = icon_center_x - text_w // 2
+            text_y = card_y + card_h - 40
+            
+            # Marquee if selected and too long
+            if is_selected and text_w > card_w - 20:
+                t = time.time()
+                scroll_speed = 50
+                scroll_dist = text_w - (card_w - 20) + 50
+                period = scroll_dist / scroll_speed + 2
+                phase = t % period
+                
+                if phase < 1: offset = 0
+                elif phase < period - 1: offset = (phase - 1) * scroll_speed
+                else: offset = scroll_dist - 50
+                
+                offset = min(offset, text_w - (card_w - 20))
+                text_x = icon_center_x - (card_w - 20) // 2 - offset
+                
+            elif not is_selected and text_w > card_w - 20:
+                 # Truncate
+                 while text_w > card_w - 40 and len(label) > 3:
+                     label = label[:-4] + "..."
+                     bbox = draw.textbbox((0, 0), label, font=self.title_font)
+                     text_w = bbox[2] - bbox[0]
+                 text_x = icon_center_x - text_w // 2
+
+            draw.text((text_x, text_y), label, font=self.title_font, fill=config.COLOR_TEXT)
+
+class ListMenu(BaseMenu):
+    def __init__(self, items, title="Menu"):
+        super().__init__(items, title)
+        self.visible_items = 5
+        self.scroll_top = 0
+
+    def move_selection(self, delta):
+        self.selected_index = (self.selected_index + delta) % len(self.items)
+        
+        # Adjust scroll
+        if self.selected_index < self.scroll_top:
+            self.scroll_top = self.selected_index
+        elif self.selected_index >= self.scroll_top + self.visible_items:
+            self.scroll_top = self.selected_index - self.visible_items + 1
+
+    def draw(self, draw, target_image=None):
+        draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
+        
+        # Title
+        draw.rectangle((0, 0, config.DISPLAY_WIDTH, 40), fill=(30, 30, 30))
+        draw.text((10, 5), self.title, font=self.title_font, fill=config.COLOR_ACCENT)
+        
+        # Items
+        start_y = 50
+        item_h = 40
+        
+        for i in range(self.visible_items):
+            idx = self.scroll_top + i
+            if idx >= len(self.items): break
+            
+            item = self.items[idx]
+            y = start_y + i * item_h
+            
+            is_selected = (idx == self.selected_index)
+            
+            if is_selected:
+                draw.rectangle((5, y, config.DISPLAY_WIDTH - 5, y + item_h - 5), fill=config.COLOR_ACCENT)
+                text_color = "white"
+            else:
+                text_color = config.COLOR_TEXT
+                
+            # Draw Icon
+            icon_size = 30
+            icon_x = 25 # Center of icon area
+            icon_y = y + item_h // 2
+            
+            self._draw_icon(draw, item['label'], icon_x, icon_y, size=icon_size, target_image=target_image)
+            
+            # Draw Text
+            draw.text((50, y + 5), item['label'], font=self.font, fill=text_color)
+
+# Alias for backward compatibility
+Menu = ListMenu
+
+class Keyboard:
+    def __init__(self, on_done):
         self.on_done = on_done
         self.active = False
         self.text = ""
@@ -89,9 +308,6 @@ class BaseMenu:
         elif key == "CAPS":
             self.caps = not self.caps
             self.current_layout = self.layout_upper if self.caps else self.layout_lower
-            # Re-flatten but try to keep index relative? 
-            # Or just reset index? Keeping index is safer if layouts match shape.
-            # They do match shape exactly.
             self._flatten_layout()
         else:
             self.text += key
