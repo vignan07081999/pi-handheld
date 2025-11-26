@@ -3,7 +3,7 @@ import config
 
 # Try to import hardware libraries
 try:
-    import RPi.GPIO as GPIO
+    from gpiozero import RotaryEncoder, Button
     HARDWARE_AVAILABLE = True
 except ImportError:
     HARDWARE_AVAILABLE = False
@@ -17,61 +17,77 @@ class InputManager:
             'select': [],
             'back': []
         }
-        self.on_any_event = None # Callback(event_name)
-        
-        self.last_button_press_time = 0
-        self.button_pressed = False
+        self.on_any_event = None
         
         if not self.simulate:
-            self._init_hardware()
+            try:
+                self._init_hardware()
+            except Exception as e:
+                print(f"Input Init Failed: {e}")
+                self.simulate = True
         else:
-            print("Input Manager running in Simulation Mode (Use Left/Right Arrows, Enter, Esc)")
+            print("Input Manager running in Simulation Mode")
 
     def _init_hardware(self):
-        try:
-            GPIO.setmode(GPIO.BCM)
-            
-            # Encoder Pins
-            GPIO.setup(config.PIN_ENCODER_CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.setup(config.PIN_ENCODER_DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.setup(config.PIN_ENCODER_SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            
-            # Add interrupts
-            GPIO.add_event_detect(config.PIN_ENCODER_CLK, GPIO.BOTH, callback=self._encoder_callback)
-            GPIO.add_event_detect(config.PIN_ENCODER_SW, GPIO.BOTH, callback=self._button_callback, bouncetime=50)
-            
-            self.clk_last_state = GPIO.input(config.PIN_ENCODER_CLK)
-        except Exception as e:
-            print(f"Input Hardware Init Failed: {e}")
-            self.simulate = True
-
-    def _encoder_callback(self, channel):
-        clk_state = GPIO.input(config.PIN_ENCODER_CLK)
-        dt_state = GPIO.input(config.PIN_ENCODER_DT)
+        # Rotary Encoder (wrap=False to track direction manually or use steps)
+        # gpiozero RotaryEncoder: 
+        # when_rotated is called. steps increases/decreases.
+        self.encoder = RotaryEncoder(config.PIN_ENCODER_CLK, config.PIN_ENCODER_DT, wrap=False)
+        self.encoder.when_rotated = self._on_rotate
         
-        if clk_state != self.clk_last_state:
-            if dt_state != clk_state:
-                self._trigger('right')
-            else:
-                self._trigger('left')
-        self.clk_last_state = clk_state
+        # Button
+        self.btn = Button(config.PIN_ENCODER_SW, pull_up=True)
+        self.btn.when_released = self._on_release
+        self.btn.when_held = self._on_hold
+        self.btn.hold_time = config.LONG_PRESS_TIME
 
-    def _button_callback(self, channel):
-        # Logic for Short Press vs Long Press
-        if GPIO.input(config.PIN_ENCODER_SW) == 0: # Pressed (Active Low)
-            self.button_pressed = True
-            self.last_button_press_time = time.time()
-        else: # Released
-            if self.button_pressed:
-                duration = time.time() - self.last_button_press_time
-                if duration >= config.LONG_PRESS_TIME:
-                    self._trigger('back')
-                else:
-                    self._trigger('select')
-                self.button_pressed = False
+    def _on_rotate(self):
+        # We need to determine direction.
+        # gpiozero doesn't pass direction to callback directly, but we can check steps change?
+        # Actually, RotaryEncoder has 'steps' property.
+        # But for simple left/right events, we might want to track last steps.
+        # Or use the internal value.
+        # Wait, if we use wrap=False, steps goes up and down.
+        # We can just compare to last value?
+        # But simpler: gpiozero 2.0 has when_rotated_clockwise and when_rotated_counter_clockwise?
+        # Let's check docs or assume standard behavior.
+        # Standard RotaryEncoder has when_rotated.
+        # Let's track steps.
+        pass
+
+    # Re-implementing _on_rotate with logic to detect direction
+    # We need to store last_steps
+        self.last_steps = 0
+        
+    def _on_rotate(self):
+        current_steps = self.encoder.steps
+        delta = current_steps - self.last_steps
+        self.last_steps = current_steps
+        
+        if delta > 0:
+            self._trigger('right')
+        elif delta < 0:
+            self._trigger('left')
+
+    def _on_release(self):
+        # If it was held, when_held fired. Does when_released also fire?
+        # Usually yes. We need to distinguish.
+        # gpiozero: when_held fires after hold_time. 
+        # We can set a flag in when_held?
+        if not hasattr(self, 'was_held'):
+            self.was_held = False
+            
+        if self.was_held:
+            self.was_held = False # Reset
+            # Do nothing, handled by hold
+        else:
+            self._trigger('select')
+
+    def _on_hold(self):
+        self.was_held = True
+        self._trigger('back')
 
     def on(self, event_name, callback):
-        """Register a callback for an event ('left', 'right', 'select', 'back')."""
         if event_name in self.callbacks:
             self.callbacks[event_name].append(callback)
 
@@ -82,20 +98,7 @@ class InputManager:
         for callback in self.callbacks[event_name]:
             callback()
 
-    def update(self):
-        """Call this in the main loop to handle simulation events."""
-        if self.simulate:
-            import pygame
-            # We assume pygame is initialized by DisplayManager
-            keys = pygame.key.get_pressed()
-            # We need to handle single key presses, not continuous holding for navigation usually
-            # But pygame.key.get_pressed() is for state. 
-            # Better to rely on the event loop in DisplayManager or handle events here if passed.
-            # Ideally, main loop passes events here.
-            pass
-
     def handle_pygame_event(self, event):
-        """Process a pygame event for simulation."""
         import pygame
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:

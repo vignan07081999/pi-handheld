@@ -89,8 +89,6 @@ def main():
     finally:
         # Cleanup
         if not args.sim:
-            import RPi.GPIO as GPIO
-            GPIO.cleanup()
             haptic.cleanup()
 
 def haptic_feedback(haptic, event_type):
