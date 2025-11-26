@@ -136,7 +136,7 @@ class AppManager:
             
             # Update Inputs
             # In simulation, we need to pump events
-            if self.input.simulate:
+            if self.input.simulate and self.display.simulate:
                 import pygame
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
