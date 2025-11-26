@@ -4,15 +4,25 @@
 
 echo "Installing Dependencies..."
 sudo apt-get update
-sudo apt-get install -y python3-pip python3-pil python3-numpy python3-rpi.gpio python3-spidev python3-smbus libopenjp2-7 libtiff5
+# libtiff5 is replaced by libtiff6 in newer Debian, or provided by libtiff-dev
+# python3-venv is needed for virtual environments
+sudo apt-get install -y python3-pip python3-pil python3-numpy python3-rpi.gpio python3-spidev python3-smbus libopenjp2-7 libtiff-dev python3-venv
 
-# Install Python Libraries
-pip3 install -r requirements.txt
+# Create Virtual Environment to avoid PEP 668 "externally-managed-environment" error
+echo "Creating Virtual Environment..."
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
+fi
+
+# Install Python Libraries into Virtual Environment
+echo "Installing Python Libraries..."
+./venv/bin/pip install -r requirements.txt
 
 # Create Systemd Service
 echo "Creating Systemd Service..."
 SERVICE_FILE=/etc/systemd/system/pi-handheld.service
 CURRENT_DIR=$(pwd)
+PYTHON_EXEC=$CURRENT_DIR/venv/bin/python
 
 sudo bash -c "cat > $SERVICE_FILE" <<EOL
 [Unit]
@@ -21,9 +31,9 @@ After=multi-user.target
 
 [Service]
 Type=simple
-User=pi
+User=$USER
 WorkingDirectory=$CURRENT_DIR
-ExecStart=/usr/bin/python3 $CURRENT_DIR/main.py
+ExecStart=$PYTHON_EXEC $CURRENT_DIR/main.py
 Restart=always
 RestartSec=5
 
