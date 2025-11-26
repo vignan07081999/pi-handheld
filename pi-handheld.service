@@ -1,0 +1,15 @@
+[Unit]
+Description=Raspberry Pi Handheld OS
+After=multi-user.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/pi_handheld_os
+ExecStart=/usr/bin/python3 /home/pi/pi_handheld_os/main.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
