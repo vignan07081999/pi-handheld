@@ -93,11 +93,9 @@ class AppManager:
                 self.input.callbacks['back'] = []
                 
                 # Register global back to exit app
-                # self.input.on('back', self.close_current_app) 
-                # Actually, let the app handle 'back' to exit, or we force it.
-                # The user said "push hold to go out of an app".
-                
-                self.input.on('back', self.close_current_app)
+                # We let the App handle 'back' to stop its run() loop.
+                # When run() returns, we call close_current_app() below.
+                # self.input.on('back', self.close_current_app)
                 
                 app_instance.run()
                 

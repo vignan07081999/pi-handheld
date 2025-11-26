@@ -20,7 +20,10 @@ class App:
         self.reset_game()
 
     def reset_game(self):
-        self.snake = [(10, 10), (10, 11), (10, 12)] # Head at end
+        # Head is last. Moving Up (0, -1).
+        # Body should be below head.
+        # Head: (10, 10). Body: (10, 11), (10, 12).
+        self.snake = [(10, 12), (10, 11), (10, 10)] 
         self.direction = (0, -1) # Moving Up
         self.food = self._spawn_food()
         self.score = 0

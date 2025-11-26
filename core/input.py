@@ -96,7 +96,8 @@ class InputManager:
         if self.on_any_event:
             self.on_any_event(event_name)
             
-        for callback in self.callbacks[event_name]:
+        # Iterate over a copy to allow modification during execution
+        for callback in list(self.callbacks[event_name]):
             callback()
 
     def handle_pygame_event(self, event):
