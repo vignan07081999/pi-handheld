@@ -92,13 +92,20 @@ class InputManager:
             self.callbacks[event_name].append(callback)
 
     def _trigger(self, event_name):
-        print(f"DEBUG: Input Event: {event_name}")
+        callbacks = self.callbacks[event_name]
+        print(f"DEBUG: Input Event: {event_name} (Callbacks: {len(callbacks)})")
+        
         if self.on_any_event:
             self.on_any_event(event_name)
             
         # Iterate over a copy to allow modification during execution
-        for callback in list(self.callbacks[event_name]):
-            callback()
+        for callback in list(callbacks):
+            try:
+                callback()
+            except Exception as e:
+                print(f"Error in callback: {e}")
+                import traceback
+                traceback.print_exc()
 
     def handle_pygame_event(self, event):
         import pygame

@@ -47,7 +47,7 @@ FONT_SIZE_TITLE = 32
 # SYSTEM SETTINGS
 # ==========================================
 ANIMATION_SPEED = 0.1 # Seconds
-LONG_PRESS_TIME = 1.0 # Seconds for "Back" action
+LONG_PRESS_TIME = 0.5 # Seconds for "Back" action
 HAPTIC_DURATION_SHORT = 0.05
 HAPTIC_DURATION_LONG = 0.2
 
