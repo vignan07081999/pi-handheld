@@ -3,57 +3,6 @@ import random
 from PIL import ImageDraw
 import config
 from core import highscore
-
-class App:
-    def __init__(self, display, input_manager):
-        self.display = display
-        self.input = input_manager
-        self.running = True
-        self.game_over = False
-        self.score_player = 0
-        self.score_ai = 0
-        
-        self.paddle_width = 60
-        self.paddle_height = 10
-        self.ball_size = 10
-        
-        self.reset_game()
-
-    def reset_game(self):
-        self.player_x = (config.DISPLAY_WIDTH - self.paddle_width) // 2
-        self.ai_x = (config.DISPLAY_WIDTH - self.paddle_width) // 2
-        
-        self.ball_pos = [config.DISPLAY_WIDTH // 2, config.DISPLAY_HEIGHT // 2]
-        self.ball_vel = [4, 4]
-        if random.random() > 0.5: self.ball_vel[0] *= -1
-        if random.random() > 0.5: self.ball_vel[1] *= -1
-        
-        self.game_over = False
-
-    def move_player(self, delta):
-        self.player_x += delta
-        self.player_x = max(0, min(config.DISPLAY_WIDTH - self.paddle_width, self.player_x))
-
-    def update(self):
-        if self.game_over: return
-
-        # Move Ball
-        self.ball_pos[0] += self.ball_vel[0]
-        self.ball_pos[1] += self.ball_vel[1]
-        
-        # Wall Collisions (Left/Right)
-        if self.ball_pos[0] <= 0 or self.ball_pos[0] >= config.DISPLAY_WIDTH - self.ball_size:
-            self.ball_vel[0] *= -1
-            
-        # Paddle Collisions
-        # Player (Bottom)
-        player_y = config.DISPLAY_HEIGHT - 20
-        if (player_y <= self.ball_pos[1] + self.ball_size <= player_y + self.paddle_height and
-import time
-import random
-from PIL import ImageDraw
-import config
-from core import highscore
 from core.ui import Menu
 
 class App:
