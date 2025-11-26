@@ -9,14 +9,36 @@ from core.haptic import HapticManager
 import config
 
 # Setup Logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("pi_os.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+try:
+    log_file = "pi_os.log"
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+except PermissionError:
+    # Fallback to /tmp if current dir is not writable (e.g. owned by root)
+    log_file = "/tmp/pi_os.log"
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+except Exception as e:
+    # Fallback to stdout only
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
 logger = logging.getLogger(__name__)
 
 def main():
