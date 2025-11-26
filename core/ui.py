@@ -248,8 +248,7 @@ class Keyboard:
         self.active = False
         self.text = ""
         self.caps = False
-        self.selected_row = 0
-        self.selected_col = 0
+        self.selected_index = 0 # Linear index
         
         self.font = load_font(config.FONT_SIZE_NORMAL)
         self.font_large = load_font(config.FONT_SIZE_LARGE, bold=True)
@@ -271,32 +270,24 @@ class Keyboard:
         ]
         
         self.current_layout = self.layout_lower
+        self._flatten_layout()
+
+    def _flatten_layout(self):
+        self.flat_keys = []
+        for r, row in enumerate(self.current_layout):
+            for c, key in enumerate(row):
+                self.flat_keys.append({'key': key, 'r': r, 'c': c})
 
     def activate(self):
         self.active = True
         self.text = ""
-        self.selected_row = 0
-        self.selected_col = 0
+        self.selected_index = 0
 
     def move_selection(self, delta):
-        total_items = sum(len(row) for row in self.current_layout)
-        current_flat = 0
-        for r in range(self.selected_row):
-            current_flat += len(self.current_layout[r])
-        current_flat += self.selected_col
-        
-        current_flat = (current_flat + delta) % total_items
-        
-        temp = 0
-        for r, row in enumerate(self.current_layout):
-            if current_flat < temp + len(row):
-                self.selected_row = r
-                self.selected_col = current_flat - temp
-                break
-            temp += len(row)
+        self.selected_index = (self.selected_index + delta) % len(self.flat_keys)
 
     def select_current(self):
-        key = self.current_layout[self.selected_row][self.selected_col]
+        key = self.flat_keys[self.selected_index]['key']
         
         if key == "SPACE":
             self.text += " "
@@ -308,6 +299,10 @@ class Keyboard:
         elif key == "CAPS":
             self.caps = not self.caps
             self.current_layout = self.layout_upper if self.caps else self.layout_lower
+            # Re-flatten but try to keep index relative? 
+            # Or just reset index? Keeping index is safer if layouts match shape.
+            # They do match shape exactly.
+            self._flatten_layout()
         else:
             self.text += key
 
@@ -320,36 +315,41 @@ class Keyboard:
         key_width = config.DISPLAY_WIDTH // 10
         key_height = 30
         
-        for r, row in enumerate(self.current_layout):
-            row_width = len(row) * key_width
+        # Draw all keys
+        for i, item in enumerate(self.flat_keys):
+            r = item['r']
+            c = item['c']
+            key = item['key']
+            
+            # Calculate Position
+            row_len = len(self.current_layout[r])
+            row_width = row_len * key_width
             start_x = (config.DISPLAY_WIDTH - row_width) // 2
             
-            if r == len(self.current_layout) - 1:
+            if r == len(self.current_layout) - 1: # Bottom row
                 key_width_special = config.DISPLAY_WIDTH // 4
                 start_x = 0
+                x = c * key_width_special
+                w = key_width_special
+            else:
+                x = start_x + c * key_width
+                w = key_width
             
-            for c, key in enumerate(row):
-                if r == len(self.current_layout) - 1:
-                    x = c * key_width_special
-                    w = key_width_special
-                else:
-                    x = start_x + c * key_width
-                    w = key_width
-                
-                y = start_y + r * key_height
-                
-                if r == self.selected_row and c == self.selected_col:
-                    draw.rectangle((x + 2, y + 2, x + w - 2, y + key_height - 2), fill=config.COLOR_ACCENT)
-                    color = "white"
-                else:
-                    draw.rectangle((x + 2, y + 2, x + w - 2, y + key_height - 2), outline=(100, 100, 100))
-                    color = (200, 200, 200)
-                
-                font = self.font
-                if len(key) > 1: font = load_font(12)
-                
-                bbox = draw.textbbox((0, 0), key, font=font)
-                text_w = bbox[2] - bbox[0]
-                text_h = bbox[3] - bbox[1]
-                
-                draw.text((x + (w - text_w) // 2, y + (key_height - text_h) // 2 - 2), key, font=font, fill=color)
+            y = start_y + r * key_height
+            
+            # Highlight
+            if i == self.selected_index:
+                draw.rectangle((x + 2, y + 2, x + w - 2, y + key_height - 2), fill=config.COLOR_ACCENT)
+                color = "white"
+            else:
+                draw.rectangle((x + 2, y + 2, x + w - 2, y + key_height - 2), outline=(100, 100, 100))
+                color = (200, 200, 200)
+            
+            font = self.font
+            if len(key) > 1: font = load_font(12)
+            
+            bbox = draw.textbbox((0, 0), key, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+            
+            draw.text((x + (w - text_w) // 2, y + (key_height - text_h) // 2 - 2), key, font=font, fill=color)

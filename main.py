@@ -6,6 +6,8 @@ from core.display import DisplayManager
 from core.input import InputManager
 from core.app_manager import AppManager
 from core.haptic import HapticManager
+import threading
+from webui.app import app as web_app
 import config
 
 # Setup Logging
@@ -85,6 +87,19 @@ def main():
         display.show()
         time.sleep(0.1)
     
+    # Start Web UI
+    print("Starting Web UI...")
+    def run_web():
+        try:
+            # Try port 80 first (requires root)
+            web_app.run(host='0.0.0.0', port=80, debug=False, use_reloader=False)
+        except:
+            print("Port 80 failed, trying 5000")
+            web_app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+            
+    web_thread = threading.Thread(target=run_web, daemon=True)
+    web_thread.start()
+
     # Initialize App Manager
     app_manager = AppManager(display, input_manager)
     

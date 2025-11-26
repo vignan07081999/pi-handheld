@@ -29,10 +29,19 @@ class App:
             
             if response.status_code == 200:
                 all_states = response.json()
-                self.entities = [
-                    e for e in all_states 
-                    if e['entity_id'].startswith('light.') or e['entity_id'].startswith('switch.')
-                ]
+                
+                if config.HA_ENTITIES:
+                    # Filter by selected list
+                    self.entities = [
+                        e for e in all_states 
+                        if e['entity_id'] in config.HA_ENTITIES
+                    ]
+                else:
+                    # Default behavior
+                    self.entities = [
+                        e for e in all_states 
+                        if e['entity_id'].startswith('light.') or e['entity_id'].startswith('switch.')
+                    ]
                 self.create_menu()
             else:
                 self.error = f"Error: {response.status_code}"

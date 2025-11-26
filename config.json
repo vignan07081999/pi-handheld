@@ -1,0 +1,11 @@
+{
+    "ha_url": "http://192.168.68.87:8123",
+    "ha_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI3NGM5NDVmMDEwYzc0OGMzYmYyYmEwYjFmYWRkZTNhYSIsImlhdCI6MTc2NDE3ODYxMCwiZXhwIjoyMDc5NTM4NjEwfQ.5hrV3Lptc0CV4qtz74zBB28yqtV1RDCLQmgwViC_agk",
+    "ha_entities": [],
+    "owm_api_key": "2c5d6bd7405d3d0e285a5e7e35741191",
+    "owm_lat": "44.184418",
+    "owm_lon": "-77.403337",
+    "owm_units": "metric",
+    "wifi_ssid": "",
+    "wifi_password": ""
+}

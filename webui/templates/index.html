@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pi Handheld Config</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding: 20px; max-width: 800px; margin: 0 auto; }
+        h1 { color: #00ffd5; }
+        .card { background: #2a2a2a; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        label { display: block; margin-top: 10px; color: #aaa; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin-top: 5px; background: #333; border: 1px solid #444; color: #fff; border-radius: 5px; }
+        button { background: #00ffd5; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        button:hover { background: #00ccaa; }
+        .entity-list { max-height: 300px; overflow-y: auto; background: #333; padding: 10px; border-radius: 5px; margin-top: 10px; }
+        .entity-item { display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #444; }
+        .entity-item input { margin-right: 10px; width: auto; }
+        .message { background: #00aa00; color: white; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+    <script>
+        async function fetchEntities() {
+            const url = document.getElementById('ha_url').value;
+            const token = document.getElementById('ha_token').value;
+            const btn = document.getElementById('fetchBtn');
+            
+            btn.innerText = "Fetching...";
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/fetch_entities', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url, token})
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    const container = document.getElementById('entityList');
+                    container.innerHTML = '';
+                    data.entities.forEach(e => {
+                        const div = document.createElement('div');
+                        div.className = 'entity-item';
+                        div.innerHTML = `
+                            <input type="checkbox" name="entities" value="${e.id}" checked>
+                            <span>${e.name} (${e.id})</span>
+                        `;
+                        container.appendChild(div);
+                    });
+                    alert("Entities Fetched!");
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (e) {
+                alert("Network Error: " + e);
+            }
+            
+            btn.innerText = "Fetch Entities";
+            btn.disabled = false;
+        }
+    </script>
+</head>
+<body>
+    <h1>Pi Handheld OS Config</h1>
+    
+    {% if message %}
+    <div class="message">{{ message }}</div>
+    {% endif %}
+    
+    <form method="POST">
+        <div class="card">
+            <h2>Home Assistant</h2>
+            <label>URL</label>
+            <input type="text" id="ha_url" name="ha_url" value="{{ config.ha_url }}">
+            
+            <label>Long-Lived Access Token</label>
+            <input type="password" id="ha_token" name="ha_token" value="{{ config.ha_token }}">
+            
+            <button type="button" id="fetchBtn" onclick="fetchEntities()">Fetch Entities</button>
+            
+            <label>Selected Entities</label>
+            <div class="entity-list" id="entityList">
+                {% for entity in config.ha_entities %}
+                <div class="entity-item">
+                    <input type="checkbox" name="entities" value="{{ entity }}" checked>
+                    <span>{{ entity }}</span>
+                </div>
+                {% endfor %}
+                {% if not config.ha_entities %}
+                <div style="padding:10px; color:#aaa;">No entities selected. Click Fetch to load from HA.</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Weather (OpenWeatherMap)</h2>
+            <label>API Key</label>
+            <input type="text" name="owm_api_key" value="{{ config.owm_api_key }}">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Latitude</label>
+                    <input type="text" name="owm_lat" value="{{ config.owm_lat }}">
+                </div>
+                <div style="flex:1;">
+                    <label>Longitude</label>
+                    <input type="text" name="owm_lon" value="{{ config.owm_lon }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>WiFi</h2>
+            <label>SSID</label>
+            <input type="text" name="wifi_ssid" value="{{ config.wifi_ssid }}">
+            <label>Password</label>
+            <input type="password" name="wifi_password" value="{{ config.wifi_password }}">
+        </div>
+        
+        <button type="submit" style="width:100%; font-size:1.2em;">Save Configuration</button>
+    </form>
+</body>
+</html>

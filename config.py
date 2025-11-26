@@ -1,42 +1,35 @@
 # Configuration for Raspberry Pi Handheld OS
+import json
+import os
 
 # ==========================================
 # GPIO PIN CONFIGURATION
 # ==========================================
-# IMPORTANT: Update these pins based on your specific wiring!
-# Refer to your "Google Gemini.pdf" for the correct pinout.
-
-# Display (ST7789) - SPI Interface
-# Using Standard SPI 0 (DIN=GPIO10, CLK=GPIO11)
-PIN_DISPLAY_CS = 8   # SPI CE0
-PIN_DISPLAY_DC = 25  # Data/Command
-PIN_DISPLAY_RST = 27 # Reset
-PIN_DISPLAY_BL = 18  # Backlight (PWM compatible)
-
-# Rotary Encoder
-PIN_ENCODER_CLK = 5  # Clock
-PIN_ENCODER_DT = 6   # Data
-PIN_ENCODER_SW = 13  # Switch (Push button)
-
-# Haptics / Vibration Motor
-PIN_HAPTIC = 26      # PWM or simple GPIO
+PIN_DISPLAY_CS = 8
+PIN_DISPLAY_DC = 25
+PIN_DISPLAY_RST = 27
+PIN_DISPLAY_BL = 18
+PIN_ENCODER_CLK = 5
+PIN_ENCODER_DT = 6
+PIN_ENCODER_SW = 13
+PIN_HAPTIC = 26
 
 # ==========================================
 # DISPLAY SETTINGS
 # ==========================================
 DISPLAY_WIDTH = 240
 DISPLAY_HEIGHT = 320
-DISPLAY_ROTATION = 90 # 0, 90, 180, 270
-DISPLAY_BAUDRATE = 24000000 # 24 MHz (Safe default)
+DISPLAY_ROTATION = 90
+DISPLAY_BAUDRATE = 24000000
 
 # ==========================================
-# UI THEME (Dark AMOLED Style)
+# UI THEME
 # ==========================================
-COLOR_BG = (0, 0, 0)          # Pure Black
-COLOR_TEXT = (255, 255, 255)  # White
-COLOR_ACCENT = (0, 255, 213)  # Cyan/Teal Neon
-COLOR_HIGHLIGHT = (40, 40, 40) # Dark Gray for selection
-COLOR_WARNING = (255, 50, 50) # Red
+COLOR_BG = (0, 0, 0)
+COLOR_TEXT = (255, 255, 255)
+COLOR_ACCENT = (0, 255, 213)
+COLOR_HIGHLIGHT = (40, 40, 40)
+COLOR_WARNING = (255, 50, 50)
 
 FONT_SIZE_SMALL = 14
 FONT_SIZE_NORMAL = 18
@@ -46,21 +39,58 @@ FONT_SIZE_TITLE = 32
 # ==========================================
 # SYSTEM SETTINGS
 # ==========================================
-ANIMATION_SPEED = 0.1 # Seconds
-LONG_PRESS_TIME = 1.0 # Seconds for "Back" action
+ANIMATION_SPEED = 0.1
+LONG_PRESS_TIME = 1.0
 HAPTIC_DURATION_SHORT = 0.05
 HAPTIC_DURATION_LONG = 0.2
 
 # ==========================================
-# HOME ASSISTANT CONFIGURATION
+# DYNAMIC CONFIGURATION (Load from JSON)
 # ==========================================
-HA_URL = "http://192.168.68.87:8123" # or IP address
-HA_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI3NGM5NDVmMDEwYzc0OGMzYmYyYmEwYjFmYWRkZTNhYSIsImlhdCI6MTc2NDE3ODYxMCwiZXhwIjoyMDc5NTM4NjEwfQ.5hrV3Lptc0CV4qtz74zBB28yqtV1RDCLQmgwViC_agk"
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'config.json')
 
-# ==========================================
-# WEATHER CONFIGURATION (OpenWeatherMap)
-# ==========================================
-OWM_API_KEY = "2c5d6bd7405d3d0e285a5e7e35741191"
-OWM_LAT = "44.184418" # New York (Example)
-OWM_LON = "-77.403337"
-OWM_UNITS = "metric" # metric or imperial
+def load_config():
+    defaults = {
+        "ha_url": "http://homeassistant.local:8123",
+        "ha_token": "",
+        "ha_entities": [],
+        "owm_api_key": "",
+        "owm_lat": "0",
+        "owm_lon": "0",
+        "owm_units": "metric",
+        "wifi_ssid": "",
+        "wifi_password": ""
+    }
+    
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                data = json.load(f)
+                defaults.update(data)
+        except Exception as e:
+            print(f"Error loading config.json: {e}")
+            
+    return defaults
+
+_config_data = load_config()
+
+HA_URL = _config_data['ha_url']
+HA_TOKEN = _config_data['ha_token']
+HA_ENTITIES = _config_data['ha_entities']
+
+OWM_API_KEY = _config_data['owm_api_key']
+OWM_LAT = _config_data['owm_lat']
+OWM_LON = _config_data['owm_lon']
+OWM_UNITS = _config_data['owm_units']
+
+WIFI_SSID = _config_data['wifi_ssid']
+WIFI_PASSWORD = _config_data['wifi_password']
+
+def save_config(data):
+    # Update global vars (for current session if needed, though restart is better)
+    # Actually, apps should reload config or we should use a config object.
+    # For now, we just save to file.
+    current = load_config()
+    current.update(data)
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(current, f, indent=4)
