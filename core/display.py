@@ -1,7 +1,6 @@
 import time
 import sys
 import spidev
-import numpy as np
 from PIL import Image, ImageDraw
 from gpiozero import OutputDevice
 import config
@@ -33,8 +32,10 @@ class DisplayManager:
         print("Initializing Display (SPI via spidev)...")
         
         # SPI Setup
+        self.bus = 0
+        self.device = 0
         self.spi = spidev.SpiDev()
-        self.spi.open(0, 0) # Bus 0, Device 0 (CS0)
+        self.spi.open(self.bus, self.device)
         self.spi.max_speed_hz = 40000000
         self.spi.mode = 0b00
 
@@ -110,14 +111,6 @@ class DisplayManager:
         buffer = []
         
         # Manual RGB888 -> RGB565 conversion (Slow but proven working)
-        # We iterate by 3 (R, G, B)
-        # Using a list comprehension might be slightly faster than a raw loop
-        # but let's stick to the user's logic for safety.
-        
-        # Optimization: Use a local lookup or simple loop
-        # Note: This is slow in Python. For 240x320 = 76800 pixels.
-        # It might take a second or two.
-        
         for i in range(0, len(image_bytes), 3):
             r = image_bytes[i]
             g = image_bytes[i+1]
@@ -134,8 +127,6 @@ class DisplayManager:
         chunk_size = 4096
         for i in range(0, len(buffer), chunk_size):
             self.spi.writebytes(buffer[i:i+chunk_size])
-            
-        # print(f"Display Updated ({len(buffer)} bytes)")
 
     def _update_simulation(self):
         import pygame
