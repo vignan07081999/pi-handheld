@@ -27,22 +27,33 @@ class App:
         self.reset_game()
 
     def reset_game(self):
-        self.paddle_y = config.DISPLAY_HEIGHT // 2 - 20
-        self.paddle_h = 40
-        self.paddle_w = 6
+        self.paddle_w = 60
+        self.paddle_h = 10
+        self.ball_size = 10
+        
+        # Vertical Orientation
+        # Player at Bottom
+        self.player_x = (config.DISPLAY_WIDTH - self.paddle_w) // 2
+        self.player_y = config.DISPLAY_HEIGHT - 20
+        
+        # AI at Top
+        self.ai_x = (config.DISPLAY_WIDTH - self.paddle_w) // 2
+        self.ai_y = 20
+        
         self.ball_pos = [config.DISPLAY_WIDTH // 2, config.DISPLAY_HEIGHT // 2]
-        self.ball_vel = [4, 4] # Initial speed
-        self.base_speed = 4
+        self.ball_vel = [4, 4]
+        if random.random() > 0.5: self.ball_vel[0] *= -1
+        if random.random() > 0.5: self.ball_vel[1] *= -1
+        
         self.current_speed_mult = 1.0
-        self.score = 0
-        self.enemy_score = 0
+        self.score_player = 0
+        self.score_ai = 0
         self.game_over = False
 
-    def move_player(self, dy):
+    def move_player(self, dx):
         if self.game_over: return
-        self.paddle_y += dy
-        self.paddle_y = max(0, min(config.DISPLAY_HEIGHT - self.paddle_h, self.paddle_y))
-        # Removed Haptic here
+        self.player_x += dx
+        self.player_x = max(0, min(config.DISPLAY_WIDTH - self.paddle_w, self.player_x))
 
     def update(self):
         if self.state == "menu":
@@ -59,31 +70,44 @@ class App:
         # Increase speed gradually
         self.current_speed_mult = min(2.5, self.current_speed_mult + 0.001)
 
-        # Wall Collisions (Top/Bottom)
-        if self.ball_pos[1] <= 0 or self.ball_pos[1] >= config.DISPLAY_HEIGHT - 5:
-            self.ball_vel[1] *= -1
-
-        # Paddle Collision
-        # Player Paddle (Left)
-        if (self.ball_pos[0] <= self.paddle_w + 2 and 
-            self.paddle_y <= self.ball_pos[1] <= self.paddle_y + self.paddle_h):
+        # Wall Collisions (Left/Right)
+        if self.ball_pos[0] <= 0 or self.ball_pos[0] >= config.DISPLAY_WIDTH - self.ball_size:
             self.ball_vel[0] *= -1
-            self.ball_pos[0] = self.paddle_w + 3
-            self.score += 1
+
+        # Paddle Collisions
+        # Player (Bottom)
+        if (self.player_y <= self.ball_pos[1] + self.ball_size <= self.player_y + self.paddle_h and
+            self.player_x <= self.ball_pos[0] + self.ball_size/2 <= self.player_x + self.paddle_w):
+            self.ball_vel[1] *= -1
+            self.ball_pos[1] = self.player_y - self.ball_size - 1
+            
+        # AI (Top)
+        if (self.ai_y <= self.ball_pos[1] <= self.ai_y + self.paddle_h and
+            self.ai_x <= self.ball_pos[0] + self.ball_size/2 <= self.ai_x + self.paddle_w):
+            self.ball_vel[1] *= -1
+            self.ball_pos[1] = self.ai_y + self.paddle_h + 1
 
         # Scoring
-        if self.ball_pos[0] < 0:
-            self.enemy_score += 1
+        if self.ball_pos[1] > config.DISPLAY_HEIGHT:
+            self.score_ai += 1
             self._reset_ball()
-        elif self.ball_pos[0] > config.DISPLAY_WIDTH:
-            # Player scores? (If enemy existed)
-            # For now, wall bounce on right is treated as enemy hit in my logic above?
-            # Let's assume right wall is enemy.
-            pass
+        elif self.ball_pos[1] < 0:
+            self.score_player += 1
+            self._reset_ball()
             
-        if self.score >= self.win_score or self.enemy_score >= self.win_score:
+        # AI Logic (Simple Tracking)
+        target_x = self.ball_pos[0] - self.paddle_w / 2
+        ai_speed = 3 * self.current_speed_mult
+        if self.ai_x < target_x:
+            self.ai_x += ai_speed
+        elif self.ai_x > target_x:
+            self.ai_x -= ai_speed
+        self.ai_x = max(0, min(config.DISPLAY_WIDTH - self.paddle_w, self.ai_x))
+            
+        if self.score_player >= self.win_score or self.score_ai >= self.win_score:
             self.game_over = True
-            highscore.save_highscore('pong', self.score)
+            if self.score_player > self.score_ai:
+                highscore.save_highscore('pong', self.score_player)
 
     def _reset_ball(self):
         self.ball_pos = [config.DISPLAY_WIDTH // 2, config.DISPLAY_HEIGHT // 2]
@@ -99,21 +123,24 @@ class App:
             return
 
         if not self.game_over:
-            # Draw Paddle
-            draw.rectangle((2, self.paddle_y, 2 + self.paddle_w, self.paddle_y + self.paddle_h), fill=config.COLOR_ACCENT)
+            # Draw Player Paddle (Bottom)
+            draw.rectangle((self.player_x, self.player_y, self.player_x + self.paddle_w, self.player_y + self.paddle_h), fill=config.COLOR_ACCENT)
+            
+            # Draw AI Paddle (Top)
+            draw.rectangle((self.ai_x, self.ai_y, self.ai_x + self.paddle_w, self.ai_y + self.paddle_h), fill=config.COLOR_WARNING)
             
             # Draw Ball
-            draw.ellipse((self.ball_pos[0], self.ball_pos[1], self.ball_pos[0]+6, self.ball_pos[1]+6), fill=config.COLOR_TEXT)
+            draw.ellipse((self.ball_pos[0], self.ball_pos[1], self.ball_pos[0]+self.ball_size, self.ball_pos[1]+self.ball_size), fill=config.COLOR_TEXT)
             
-            # Draw Enemy Wall/Paddle
-            draw.rectangle((config.DISPLAY_WIDTH - 10, 0, config.DISPLAY_WIDTH - 5, config.DISPLAY_HEIGHT), fill=(50, 50, 50))
-            
-            # Score
-            draw.text((config.DISPLAY_WIDTH // 2 - 20, 10), f"{self.score} - {self.enemy_score}", fill=config.COLOR_TEXT)
+            # Draw Scores
+            draw.text((10, config.DISPLAY_HEIGHT // 2), str(self.score_player), fill=config.COLOR_ACCENT)
+            draw.text((config.DISPLAY_WIDTH - 20, config.DISPLAY_HEIGHT // 2), str(self.score_ai), fill=config.COLOR_WARNING)
         else:
-            draw.text((60, 100), "GAME OVER", fill=config.COLOR_WARNING)
-            draw.text((70, 140), f"Score: {self.score}", fill=config.COLOR_TEXT)
+            res = "YOU WIN" if self.score_player > self.score_ai else "YOU LOSE"
+            draw.text((80, 100), res, fill=config.COLOR_TEXT)
+            draw.text((70, 140), f"{self.score_player} - {self.score_ai}", fill=config.COLOR_TEXT)
             draw.text((50, 240), "Press Select to Menu", fill=(100, 100, 100))
+            draw.text((60, 260), "Hold Back to Exit", fill=(100, 100, 100))
 
     def handle_input(self, event):
         if self.state == "menu":
@@ -123,8 +150,8 @@ class App:
             elif event == 'back': return False # Exit App
             
         elif self.state == "game":
-            if event == 'left': self.move_player(-15)
-            elif event == 'right': self.move_player(15)
+            if event == 'left': self.move_player(-20) # Move Left
+            elif event == 'right': self.move_player(20) # Move Right
             elif event == 'back': 
                 self.state = "menu" # Back to menu
                 return True
