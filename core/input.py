@@ -18,6 +18,7 @@ class InputManager:
             'back': []
         }
         self.on_any_event = None
+        self.last_steps = 0
         
         if not self.simulate:
             try:
