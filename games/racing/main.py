@@ -265,9 +265,11 @@ class App:
             return True
 
         if event == 'left':
-            self.player_x -= 0.1
+            self.player_x -= 0.2
+            # print(f"DEBUG: Left. Pos: {self.player_x}")
         elif event == 'right':
-            self.player_x += 0.1
+            self.player_x += 0.2
+            # print(f"DEBUG: Right. Pos: {self.player_x}")
         elif event == 'back':
             return False
             
