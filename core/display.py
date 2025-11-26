@@ -73,9 +73,13 @@ class DisplayManager:
 
     def _set_window(self, x_start, y_start, x_end, y_end):
         self._command(0x2A)
+        self.dc.on() # Data Mode for parameters
         self.spi.writebytes([x_start >> 8, x_start & 0xFF, x_end >> 8, x_end & 0xFF])
+        
         self._command(0x2B)
+        self.dc.on() # Data Mode for parameters
         self.spi.writebytes([y_start >> 8, y_start & 0xFF, y_end >> 8, y_end & 0xFF])
+        
         self._command(0x2C)
 
     def _init_simulation(self):
