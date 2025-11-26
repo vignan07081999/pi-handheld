@@ -6,7 +6,10 @@ import config
 
 # Try to import hardware libraries
 try:
-    import ST7789
+    try:
+        import ST7789
+    except ImportError:
+        import st7789 as ST7789
     import RPi.GPIO as GPIO
     HARDWARE_AVAILABLE = True
 except ImportError as e:
@@ -30,16 +33,28 @@ class DisplayManager:
 
     def _init_hardware(self):
         print("Initializing ST7789 Display...")
+        
+        # Explicitly turn on Backlight first
+        try:
+            GPIO.setup(config.PIN_DISPLAY_BL, GPIO.OUT)
+            GPIO.output(config.PIN_DISPLAY_BL, GPIO.HIGH)
+        except:
+            pass
+
+        # CS=0 for CE0 (GPIO8), CS=1 for CE1 (GPIO7)
+        # We assume standard SPI0 based on pins.
+        spi_cs = 0 if config.PIN_DISPLAY_CS == 8 else 1
+        
         self.disp = ST7789.ST7789(
             port=0,
-            cs=config.PIN_DISPLAY_CS,
+            cs=spi_cs, # Pass SPI CE Index, not Pin Number
             dc=config.PIN_DISPLAY_DC,
             rst=config.PIN_DISPLAY_RST,
             backlight=config.PIN_DISPLAY_BL,
             rotation=config.DISPLAY_ROTATION,
             spi_speed_hz=config.DISPLAY_BAUDRATE
         )
-        self.disp._spi.mode = 3 # Fix for some ST7789 displays
+        self.disp._spi.mode = 3
         self.disp.begin()
         self.disp.clear()
 

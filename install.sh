@@ -4,6 +4,8 @@
 
 echo "Installing Dependencies..."
 sudo apt-get update
+# Enable SPI Interface
+sudo raspi-config nonint do_spi 0
 # libtiff5 is replaced by libtiff6 in newer Debian, or provided by libtiff-dev
 # python3-venv is needed for virtual environments
 sudo apt-get install -y python3-pip python3-pil python3-numpy python3-rpi.gpio python3-spidev python3-smbus libopenjp2-7 libtiff-dev python3-venv

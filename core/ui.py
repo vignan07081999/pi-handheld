@@ -10,15 +10,29 @@ class Menu:
         self.selected_index = 0
         self.scroll_offset = 0
         self.target_scroll_offset = 0
-        self.font = ImageFont.truetype("arial.ttf", config.FONT_SIZE_NORMAL) # Fallback if not found?
-        self.title_font = ImageFont.truetype("arial.ttf", config.FONT_SIZE_TITLE)
+        self.scroll_offset = 0
+        self.target_scroll_offset = 0
         
-        # Try loading a better font if available, or use default
-        try:
-            self.font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", config.FONT_SIZE_NORMAL)
-            self.title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", config.FONT_SIZE_TITLE)
-        except:
-            pass # Use default PIL font or arial if on Windows
+        self.font = self._load_font(config.FONT_SIZE_NORMAL)
+        self.title_font = self._load_font(config.FONT_SIZE_TITLE, bold=True)
+
+    def _load_font(self, size, bold=False):
+        fonts = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf" if bold else "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+            "arial.ttf"
+        ]
+        
+        for font_path in fonts:
+            try:
+                return ImageFont.truetype(font_path, size)
+            except OSError:
+                continue
+        
+        # Fallback to default
+        print(f"Warning: No fonts found. Using default.")
+        return ImageFont.load_default()
 
     def move_selection(self, delta):
         self.selected_index = (self.selected_index + delta) % len(self.items)

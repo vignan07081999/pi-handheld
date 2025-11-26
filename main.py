@@ -1,18 +1,30 @@
 import sys
 import argparse
 import time
+import logging
 from core.display import DisplayManager
 from core.input import InputManager
 from core.app_manager import AppManager
 from core.haptic import HapticManager
 import config
 
+# Setup Logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("pi_os.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
 def main():
     parser = argparse.ArgumentParser(description='Raspberry Pi Handheld OS')
     parser.add_argument('--sim', action='store_true', help='Run in simulation mode on PC')
     args = parser.parse_args()
 
-    print("Starting Pi Handheld OS...")
+    logger.info("Starting Pi Handheld OS...")
     
     # Initialize Core Systems
     display = DisplayManager(simulate=args.sim)
