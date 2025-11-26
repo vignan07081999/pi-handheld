@@ -21,6 +21,9 @@ class DisplayManager:
                 self._init_hardware()
             except Exception as e:
                 print(f"Display Init Failed: {e}")
+                if "busy" in str(e).lower():
+                    print("HINT: 'GPIO busy' usually means the background service is running.")
+                    print("Try running: sudo systemctl stop pi-handheld.service")
                 self.simulate = True
                 self._init_simulation()
         else:
@@ -97,50 +100,42 @@ class DisplayManager:
             self._update_simulation()
 
     def _update_display(self):
-        # Resize if needed (shouldn't be if logic is correct)
+        # Resize if needed
         img = self.image
         if img.width != self.width or img.height != self.height:
             img = img.resize((self.width, self.height))
         
-        # Convert to RGB565 using numpy for speed
-        # RGB888 -> RGB565
-        # R: 5 bits, G: 6 bits, B: 5 bits
+        # Fast PIL to Bytes conversion (RGB888)
+        image_bytes = img.convert("RGB").tobytes()
+        buffer = []
         
-        # Convert PIL to numpy array
-        arr = np.array(img).astype('uint16')
+        # Manual RGB888 -> RGB565 conversion (Slow but proven working)
+        # We iterate by 3 (R, G, B)
+        # Using a list comprehension might be slightly faster than a raw loop
+        # but let's stick to the user's logic for safety.
         
-        # Extract channels
-        r = arr[:,:,0]
-        g = arr[:,:,1]
-        b = arr[:,:,2]
+        # Optimization: Use a local lookup or simple loop
+        # Note: This is slow in Python. For 240x320 = 76800 pixels.
+        # It might take a second or two.
         
-        # Pack bits: (R & 0xF8) << 8 | (G & 0xFC) << 3 | (B >> 3)
-        # Note: We need to swap bytes for SPI transfer usually? 
-        # The user code does:
-        # rgb = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
-        # buffer.append(rgb >> 8)
-        # buffer.append(rgb & 0xFF)
-        # So it sends High Byte then Low Byte (Big Endian)
-        
-        rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
-        
-        # Split into high and low bytes
-        high_byte = (rgb565 >> 8).astype('uint8')
-        low_byte = (rgb565 & 0xFF).astype('uint8')
-        
-        # Interleave
-        # Stack depth-wise then flatten
-        packed = np.dstack((high_byte, low_byte)).flatten()
-        
+        for i in range(0, len(image_bytes), 3):
+            r = image_bytes[i]
+            g = image_bytes[i+1]
+            b = image_bytes[i+2]
+            rgb = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+            buffer.append(rgb >> 8)
+            buffer.append(rgb & 0xFF)
+
         # Write to SPI
         self._set_window(0, 0, self.width-1, self.height-1)
         self.dc.on()
         
-        # Chunked write (4096 bytes)
-        data = packed.tobytes()
+        # Chunked write
         chunk_size = 4096
-        for i in range(0, len(data), chunk_size):
-            self.spi.writebytes(list(data[i:i+chunk_size]))
+        for i in range(0, len(buffer), chunk_size):
+            self.spi.writebytes(buffer[i:i+chunk_size])
+            
+        # print(f"Display Updated ({len(buffer)} bytes)")
 
     def _update_simulation(self):
         import pygame
