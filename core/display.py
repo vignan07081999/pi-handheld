@@ -124,7 +124,6 @@ class DisplayManager:
             buffer.append(rgb & 0xFF)
 
         # Write to SPI
-        print(f"DEBUG: Writing {len(buffer)} bytes to SPI...")
         self._set_window(0, 0, self.width-1, self.height-1)
         self.dc.on()
         
@@ -132,8 +131,6 @@ class DisplayManager:
         chunk_size = 4096
         for i in range(0, len(buffer), chunk_size):
             self.spi.writebytes(buffer[i:i+chunk_size])
-        
-        print("DEBUG: Frame written.")
 
     def _update_simulation(self):
         import pygame

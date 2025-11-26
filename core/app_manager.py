@@ -179,3 +179,33 @@ class AppManager:
             if event_name == 'left': self.main_menu.move_selection(-1)
             elif event_name == 'right': self.main_menu.move_selection(1)
             elif event_name == 'select': self.main_menu.select_current()
+            elif event_name == 'back':
+                # Shortcut (Long Press is handled by InputManager sending 'back' after hold)
+                # But 'back' is also sent for short press if we don't distinguish?
+                # InputManager sends 'back' on release if short, or 'back' on hold?
+                # Let's check InputManager.
+                # Assuming 'back' event means "Back Action" (Short press usually).
+                # Wait, user said "If I long press enough".
+                # Standard 'back' usually implies exit/back.
+                # If we want a specific "Shortcut" event, we might need to modify InputManager.
+                # OR, we check if we are at the top level.
+                # If we are at Main Menu, 'back' usually does nothing or reboots.
+                # Let's use 'back' at Main Menu to trigger Shortcut.
+                self.launch_shortcut()
+
+    def launch_shortcut(self):
+        target = config.SHORTCUT_APP
+        print(f"Shortcut triggered: {target}")
+        
+        # Find app
+        found = None
+        for app in self.apps:
+            if app['id'] == target: found = app
+        if not found:
+            for game in self.games:
+                if game['id'] == target: found = game
+        
+        if found:
+            self.launch_app(found)
+        else:
+            print(f"Shortcut app '{target}' not found.")

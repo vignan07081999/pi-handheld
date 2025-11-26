@@ -7,5 +7,6 @@
     "owm_lon": "-77.403337",
     "owm_units": "metric",
     "wifi_ssid": "",
-    "wifi_password": ""
+    "wifi_password": "",
+    "shortcut_app": "torch"
 }

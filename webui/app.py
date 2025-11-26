@@ -29,6 +29,7 @@ def index():
         config['owm_lon'] = request.form.get('owm_lon')
         config['wifi_ssid'] = request.form.get('wifi_ssid')
         config['wifi_password'] = request.form.get('wifi_password')
+        config['shortcut_app'] = request.form.get('shortcut_app')
         
         # Selected Entities
         selected_entities = request.form.getlist('entities')

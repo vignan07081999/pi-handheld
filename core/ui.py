@@ -63,11 +63,8 @@ class CarouselMenu(BaseMenu):
             self.target_scroll_offset = self.selected_index * config.DISPLAY_WIDTH
 
     def update(self):
-        diff = self.target_scroll_offset - self.scroll_offset
-        if abs(diff) > 1:
-            self.scroll_offset += diff * 0.2 # Faster animation
-        else:
-            self.scroll_offset = self.target_scroll_offset
+        # Snap to target (No animation for performance)
+        self.scroll_offset = self.target_scroll_offset
 
     def draw(self, draw, target_image=None):
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)

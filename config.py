@@ -86,6 +86,8 @@ OWM_UNITS = _config_data['owm_units']
 WIFI_SSID = _config_data['wifi_ssid']
 WIFI_PASSWORD = _config_data['wifi_password']
 
+SHORTCUT_APP = _config_data.get('shortcut_app', 'torch')
+
 def save_config(data):
     # Update global vars (for current session if needed, though restart is better)
     # Actually, apps should reload config or we should use a config object.
