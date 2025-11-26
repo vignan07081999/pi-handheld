@@ -2,7 +2,7 @@ import os
 import sys
 import importlib
 import time
-from core.ui import CarouselMenu, ListMenu
+from core.ui import CarouselMenu, ListMenu, StatusBar
 import config
 
 class AppManager:
@@ -16,6 +16,7 @@ class AppManager:
         
         self.main_menu = None
         self.sub_menu = None # For categories
+        self.status_bar = StatusBar()
         
         self._load_apps()
         self._create_main_menu()
@@ -158,6 +159,9 @@ class AppManager:
                 self.main_menu.update()
                 self.main_menu.draw(self.display.get_draw(), self.display.get_image())
             
+            # Draw Status Bar (Overlay)
+            self.status_bar.draw(self.display.get_draw(), self.display.get_image())
+
             self.display.show()
             time.sleep(0.03)
 

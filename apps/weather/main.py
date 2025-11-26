@@ -35,6 +35,11 @@ class App:
             if response.status_code == 200:
                 self.weather_data = response.json()
                 self.last_update = time.time()
+                
+                # Update Global Config for Status Bar
+                temp = self.weather_data['main']['temp']
+                unit = "C" if config.OWM_UNITS == "metric" else "F"
+                config.WEATHER_TEMP = f"{int(temp)}°{unit}"
             else:
                 self.error = f"Error: {response.status_code}"
         except Exception as e:

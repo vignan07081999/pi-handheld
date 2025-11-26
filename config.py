@@ -41,8 +41,8 @@ FONT_SIZE_TITLE = 32
 # ==========================================
 ANIMATION_SPEED = 0.1
 LONG_PRESS_TIME = 1.0
-HAPTIC_DURATION_SHORT = 0.05
-HAPTIC_DURATION_LONG = 0.2
+HAPTIC_DURATION_SHORT = 0.015 # 15ms for crisp tick
+HAPTIC_DURATION_LONG = 0.1    # 100ms for bump
 
 # ==========================================
 # DYNAMIC CONFIGURATION (Load from JSON)
@@ -87,6 +87,12 @@ WIFI_SSID = _config_data['wifi_ssid']
 WIFI_PASSWORD = _config_data['wifi_password']
 
 SHORTCUT_APP = _config_data.get('shortcut_app', 'torch')
+ICONS = _config_data.get('icons', {})
+
+# Global Status Variables (Runtime only)
+WIFI_CONNECTED = False
+WEATHER_TEMP = None
+WEATHER_ICON = None
 
 def save_config(data):
     # Update global vars (for current session if needed, though restart is better)

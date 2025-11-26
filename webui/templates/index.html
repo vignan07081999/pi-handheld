@@ -197,6 +197,26 @@
                 <option value="home_assistant" {% if config.shortcut_app=='home_assistant' %}selected{% endif %}>Home
                     Assistant</option>
             </select>
+            </select>
+        </div>
+
+        <div class="card">
+            <h2>Icon Configuration</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                {% for app_id in apps %}
+                <div style="background: #333; padding: 10px; border-radius: 5px;">
+                    <label style="margin-top:0;">{{ app_id|title }}</label>
+                    <select name="icon_{{ app_id }}"
+                        style="width:100%; padding:5px; background:#222; color:white; border:1px solid #444; margin-top:5px;">
+                        <option value="">Default</option>
+                        {% for icon in icons %}
+                        <option value="{{ icon }}" {% if config.icons and config.icons[app_id]==icon %}selected{% endif
+                            %}>{{ icon }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endfor %}
+            </div>
         </div>
 
         <button type="submit" style="width:100%; font-size:1.2em;">Save Configuration</button>

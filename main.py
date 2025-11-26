@@ -119,11 +119,11 @@ def main():
 
 def haptic_feedback(haptic, event_type):
     if event_type in ['left', 'right']:
-        haptic.vibrate(config.HAPTIC_DURATION_SHORT, 0.4) # Subtle click
+        haptic.vibrate(config.HAPTIC_DURATION_SHORT, 0.3) # Very subtle tick
     elif event_type == 'select':
-        haptic.vibrate(config.HAPTIC_DURATION_SHORT, 0.8) # Stronger click
+        haptic.vibrate(config.HAPTIC_DURATION_SHORT, 0.6) # Distinct click
     elif event_type == 'back':
-        haptic.vibrate(config.HAPTIC_DURATION_LONG, 1.0) # Long vibration
+        haptic.vibrate(config.HAPTIC_DURATION_LONG, 0.8) # Strong bump
 
 if __name__ == "__main__":
     main()

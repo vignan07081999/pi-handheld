@@ -46,12 +46,21 @@ class BaseMenu:
     def _draw_icon(self, draw, name, cx, cy, size=60, target_image=None):
         # Check for custom icon first
         import os
-        icon_name = name.lower().replace(" ", "_")
-        # Remove any leading icons from label (e.g. "[X] ")
-        if "]" in icon_name:
-            icon_name = icon_name.split("]")[-1].strip()
+        
+        # Check Config Mapping first
+        key = name.lower().replace(" ", "_")
+        if "]" in key: key = key.split("]")[-1].strip()
+        
+        icon_filename = config.ICONS.get(key, None)
+        
+        if not icon_filename:
+            # Default lookup
+            icon_filename = f"{key}.png"
             
-        icon_path = f"assets/icons/{icon_name}.png"
+        if not icon_filename.endswith('.png'):
+            icon_filename += ".png"
+            
+        icon_path = f"assets/icons/{icon_filename}"
         
         if os.path.exists(icon_path) and target_image:
             try:
@@ -250,6 +259,72 @@ class ListMenu(BaseMenu):
 
 # Alias for backward compatibility
 Menu = ListMenu
+
+class StatusBar:
+    def __init__(self):
+        self.height = 24
+        self.font = load_font(12, bold=True)
+        self.last_update = 0
+        
+    def draw(self, draw, target_image=None):
+        # Draw Background
+        draw.rectangle((0, 0, config.DISPLAY_WIDTH, self.height), fill="black")
+        
+        # Draw Time (Right)
+        t_str = time.strftime("%H:%M")
+        bbox = draw.textbbox((0, 0), t_str, font=self.font)
+        w = bbox[2] - bbox[0]
+        draw.text((config.DISPLAY_WIDTH - w - 5, 5), t_str, font=self.font, fill="white")
+        
+        # Draw WiFi (Left)
+        # We can check config.WIFI_CONNECTED
+        # For icon, we look for assets/icons/wifi_on.png or wifi_off.png
+        wifi_icon_name = "wifi_on" if config.WIFI_CONNECTED else "wifi_off"
+        self._draw_icon(draw, wifi_icon_name, 15, 12, size=16, target_image=target_image)
+        
+        # Draw Weather (Left, after WiFi)
+        if config.WEATHER_TEMP:
+            # Draw Temp
+            temp_str = f"{config.WEATHER_TEMP}"
+            draw.text((35, 5), temp_str, font=self.font, fill="white")
+            
+            # Draw Icon if available
+            # We might need a mapping from OWM icon to our local icons
+            # For now, just show temp
+            pass
+
+    def _draw_icon(self, draw, name, cx, cy, size=16, target_image=None):
+        import os
+        
+        # Check Config Mapping first
+        icon_name = config.ICONS.get(name.lower().replace(" ", "_"), None)
+        
+        if not icon_name:
+            # Default lookup
+            icon_name = name.lower().replace(" ", "_")
+            if "]" in icon_name:
+                icon_name = icon_name.split("]")[-1].strip()
+            icon_name = f"{icon_name}.png"
+            
+        # Ensure extension
+        if not icon_name.endswith('.png'):
+            icon_name += ".png"
+            
+        icon_path = f"assets/icons/{icon_name}"
+        
+        if os.path.exists(icon_path) and target_image:
+            try:
+                icon = Image.open(icon_path).convert("RGBA")
+                icon.thumbnail((size, size))
+                w, h = icon.size
+                target_image.paste(icon, (int(cx - w/2), int(cy - h/2)), icon)
+            except:
+                pass
+        else:
+            # Fallback
+            if "wifi" in name:
+                color = "green" if "on" in name else "red"
+                draw.ellipse((cx-5, cy-5, cx+5, cy+5), fill=color)
 
 class Keyboard:
     def __init__(self, on_done):
