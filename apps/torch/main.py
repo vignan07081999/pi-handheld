@@ -57,23 +57,13 @@ class App:
         self.running = False
 
     # We need to override the run method to actually register the callback
-    def run(self):
-        self.running = True
-        
-        # Register exit handler
-        self.input.on('back', self.stop)
-        
-        # Draw
+    def handle_input(self, event):
+        pass # Only exit handled by global back
+
+    def update(self):
+        pass
+
+    def draw(self):
         draw = self.display.get_draw()
         draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=(255, 255, 255))
         draw.text((60, 150), "TORCH", fill=(0, 0, 0))
-        self.display.show()
-        
-        while self.running:
-            if self.input.simulate:
-                import pygame
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.running = False
-                    self.input.handle_pygame_event(event)
-            time.sleep(0.05)

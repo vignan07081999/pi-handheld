@@ -171,19 +171,15 @@ class App:
     def stop(self):
         self.running = False
 
-    def run(self):
-        self.set_menu_mode()
-        
-        while self.running:
-            self.update()
-            self.draw()
-            self.display.show()
+    def handle_input(self, event):
+        if self.state == "menu":
+            if event == 'left': self.menu.move_selection(-1)
+            elif event == 'right': self.menu.move_selection(1)
+            elif event == 'select': self.menu.select_current()
             
-            if self.input.simulate:
-                import pygame
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.running = False
-                    self.input.handle_pygame_event(event)
+        elif self.state == "game":
+            if event == 'left': self.turn_left()
+            elif event == 'right': self.turn_right()
             
-            time.sleep(self.speed if self.state == "game" else 0.05)
+        elif self.state == "game_over":
+            if event == 'select': self.set_menu_mode()

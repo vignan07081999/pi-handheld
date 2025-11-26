@@ -91,6 +91,14 @@ class InputManager:
         if event_name in self.callbacks:
             self.callbacks[event_name].append(callback)
 
+    def clear_callbacks(self):
+        self.callbacks = {
+            'left': [],
+            'right': [],
+            'select': [],
+            'back': []
+        }
+
     def _trigger(self, event_name):
         callbacks = self.callbacks[event_name]
         print(f"DEBUG: Input Event: {event_name} (Callbacks: {len(callbacks)})")

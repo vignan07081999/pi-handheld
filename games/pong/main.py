@@ -109,22 +109,8 @@ class App:
     def stop(self):
         self.running = False
 
-    def run(self):
-        self.input.on('left', lambda: self.move_player(-15))
-        self.input.on('right', lambda: self.move_player(15))
-        self.input.on('select', lambda: self.reset_game() if self.game_over else None)
-        self.input.on('back', self.stop)
-        
-        while self.running:
-            self.update()
-            self.draw()
-            self.display.show()
-            
-            if self.input.simulate:
-                import pygame
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.running = False
-                    self.input.handle_pygame_event(event)
-            
-            time.sleep(0.03)
+    def handle_input(self, event):
+        if event == 'left': self.move_player(-15)
+        elif event == 'right': self.move_player(15)
+        elif event == 'select': 
+            if self.game_over: self.reset_game()

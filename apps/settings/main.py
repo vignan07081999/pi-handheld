@@ -26,47 +26,12 @@ class App:
 
     def set_mode(self, mode):
         self.mode = mode
-        self.input.callbacks['left'] = []
-        self.input.callbacks['right'] = []
-        self.input.callbacks['select'] = []
-        self.input.callbacks['back'] = [] # Clear previous
+        # No need to register callbacks anymore!
         
-        if mode == 'menu':
-            self.input.on('left', lambda: self.main_menu.move_selection(-1))
-            self.input.on('right', lambda: self.main_menu.move_selection(1))
-            self.input.on('select', self.main_menu.select_current)
-            self.input.on('back', self.stop)
-            
-        elif mode == 'wifi_scan':
+        if mode == 'wifi_scan':
             self.scan_wifi()
-            self.input.on('back', lambda: self.set_mode('menu'))
-            
         elif mode == 'wifi_password':
             self.keyboard.activate()
-            self.input.on('left', lambda: self.keyboard.move_selection(-1))
-            self.input.on('right', lambda: self.keyboard.move_selection(1))
-            self.input.on('select', self.keyboard.select_current)
-            self.input.on('back', self.keyboard.backspace) # Short press backspace?
-            # We need a way to finish. Keyboard has "Finish" logic?
-            # My Keyboard implementation doesn't have a visible "Enter" key in the wheel.
-            # I should add one or use Long Press Select?
-            # Let's add "OK" to the char list or handle it.
-            # For now, let's say "Long Press Select" finishes? 
-            # Or just add a special char.
-            # Let's assume the user selects " " (space) then something else?
-            # Actually, let's update Keyboard to have an "OK" option or similar.
-            # Or just use a specific button combo.
-            # Let's use "Long Press Select" to finish for now, but I need to implement that in InputManager.
-            # InputManager only has 'select' (short) and 'back' (long).
-            # So 'back' is backspace. How to finish?
-            # Maybe a double click? Or just add "OK" to the character list.
-            pass
-
-        elif mode == 'highscores':
-            self.input.on('back', lambda: self.set_mode('menu'))
-            
-        elif mode == 'about':
-            self.input.on('back', lambda: self.set_mode('menu'))
 
     def scan_wifi(self):
         # Simulate or Real Scan
@@ -91,10 +56,6 @@ class App:
                 'action': lambda s=ssid: self.select_wifi(s)
             })
         self.wifi_menu = Menu(items, title="Select WiFi")
-        
-        self.input.on('left', lambda: self.wifi_menu.move_selection(-1))
-        self.input.on('right', lambda: self.wifi_menu.move_selection(1))
-        self.input.on('select', self.wifi_menu.select_current)
 
     def select_wifi(self, ssid):
         self.selected_ssid = ssid
@@ -123,65 +84,75 @@ class App:
         else:
             print("Simulated Shutdown")
 
-    def stop(self):
-        self.running = False
+    def handle_input(self, event):
+        if self.mode == 'menu':
+            if event == 'left': self.main_menu.move_selection(-1)
+            elif event == 'right': self.main_menu.move_selection(1)
+            elif event == 'select': self.main_menu.select_current()
+            elif event == 'back': return False # Exit App
+            
+        elif self.mode == 'wifi_scan':
+            if hasattr(self, 'wifi_menu'):
+                if event == 'left': self.wifi_menu.move_selection(-1)
+                elif event == 'right': self.wifi_menu.move_selection(1)
+                elif event == 'select': self.wifi_menu.select_current()
+            if event == 'back': 
+                self.set_mode('menu')
+                return True # Consumed
+            
+        elif self.mode == 'wifi_password':
+            if event == 'left': self.keyboard.move_selection(-1)
+            elif event == 'right': self.keyboard.move_selection(1)
+            elif event == 'select': self.keyboard.select_current()
+            elif event == 'back': 
+                self.keyboard.backspace()
+                # If empty and back pressed? Go back?
+                if len(self.keyboard.text) == 0:
+                    self.set_mode('wifi_scan')
+                return True
+            
+        elif self.mode == 'highscores' or self.mode == 'about':
+            if event == 'back': 
+                self.set_mode('menu')
+                return True
 
-    def run(self):
-        self.set_mode('menu')
+        return False # Default: Not handled
+
+    def update(self):
+        if self.mode == 'menu':
+            self.main_menu.update()
+        elif self.mode == 'wifi_scan' and hasattr(self, 'wifi_menu'):
+            self.wifi_menu.update()
+
+    def draw(self):
+        draw = self.display.get_draw()
+        draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
         
-        while self.running:
-            draw = self.display.get_draw()
-            draw.rectangle((0, 0, config.DISPLAY_WIDTH, config.DISPLAY_HEIGHT), fill=config.COLOR_BG)
+        if self.mode == 'menu':
+            self.main_menu.draw(draw)
             
-            if self.mode == 'menu':
-                self.main_menu.update()
-                self.main_menu.draw(draw)
+        elif self.mode == 'wifi_scan':
+            if hasattr(self, 'wifi_menu'):
+                self.wifi_menu.draw(draw)
+            else:
+                draw.text((80, 140), "Scanning...", fill=config.COLOR_TEXT)
                 
-            elif self.mode == 'wifi_scan':
-                if hasattr(self, 'wifi_menu'):
-                    self.wifi_menu.update()
-                    self.wifi_menu.draw(draw)
-                else:
-                    draw.text((80, 140), "Scanning...", fill=config.COLOR_TEXT)
-                    
-            elif self.mode == 'wifi_password':
-                self.keyboard.draw(draw)
-                draw.text((20, 40), f"Pass for {self.selected_ssid}", fill=config.COLOR_TEXT)
-                draw.text((20, 280), "Hold Select to OK", fill=(100, 100, 100)) # Hint
-                
-                # Hacky "Hold Select" detection? 
-                # InputManager doesn't support "Hold Select".
-                # Let's just add "OK" to the keyboard chars in ui.py or here.
-                # For now, I'll just use a special check in the loop if I could.
-                # But I can't easily.
-                # Let's modify Keyboard in ui.py to include "OK" at the end.
-                pass
+        elif self.mode == 'wifi_password':
+            self.keyboard.draw(draw)
+            draw.text((20, 40), f"Pass for {self.selected_ssid}", fill=config.COLOR_TEXT)
+            draw.text((20, 280), "Hold Select to OK", fill=(100, 100, 100)) # Hint
+            
+        elif self.mode == 'highscores':
+            scores = highscore.load_highscores()
+            y = 40
+            draw.text((80, 10), "HIGHSCORES", font=self.main_menu.title_font, fill=config.COLOR_ACCENT)
+            for game, score in scores.items():
+                draw.text((40, y), f"{game.title()}: {score}", font=self.main_menu.font, fill=config.COLOR_TEXT)
+                y += 30
+            draw.text((60, 280), "Back to Return", fill=(100, 100, 100))
 
-            elif self.mode == 'highscores':
-                scores = highscore.load_highscores()
-                y = 40
-                draw.text((80, 10), "HIGHSCORES", font=self.main_menu.title_font, fill=config.COLOR_ACCENT)
-                for game, score in scores.items():
-                    draw.text((40, y), f"{game.title()}: {score}", font=self.main_menu.font, fill=config.COLOR_TEXT)
-                    y += 30
-                draw.text((60, 280), "Back to Return", fill=(100, 100, 100))
-
-            elif self.mode == 'about':
-                draw.text((80, 20), "ABOUT", font=self.main_menu.title_font, fill=config.COLOR_ACCENT)
-                draw.text((20, 60), "Pi Handheld OS v1.0", fill=config.COLOR_TEXT)
-                draw.text((20, 90), "Python Based OS", fill=config.COLOR_TEXT)
-                draw.text((20, 120), "Created by Gemini", fill=config.COLOR_TEXT)
-                
-            self.display.show()
-            
-            if self.input.simulate:
-                import pygame
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.running = False
-                    self.input.handle_pygame_event(event)
-                    # Hack for Keyboard Finish in Sim
-                    if self.mode == 'wifi_password' and event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                        self.keyboard.finish()
-            
-            time.sleep(0.05)
+        elif self.mode == 'about':
+            draw.text((80, 20), "ABOUT", font=self.main_menu.title_font, fill=config.COLOR_ACCENT)
+            draw.text((20, 60), "Pi Handheld OS v1.0", fill=config.COLOR_TEXT)
+            draw.text((20, 90), "Python Based OS", fill=config.COLOR_TEXT)
+            draw.text((20, 120), "Created by Gemini", fill=config.COLOR_TEXT)

@@ -106,51 +106,6 @@ class App:
         else:
             draw.text((60, 100), "MAZE CLEARED!", fill=config.COLOR_ACCENT)
             draw.text((70, 140), f"Time: {int(time.time() - self.start_time)}s", fill=config.COLOR_TEXT)
-            draw.text((50, 240), "Press Select to Restart", fill=(100, 100, 100))
-            draw.text((60, 260), "Hold Back to Exit", fill=(100, 100, 100))
-
-    def stop(self):
-        self.running = False
-
-    def run(self):
-        # Controls: Rotary encoder isn't great for 4-way movement.
-        # We need a way to select direction.
-        # Option 1: Rotate to select direction (Arrow rotates), Press to move.
-        # Option 2: Left/Right rotates direction, Select moves forward.
-        # Let's go with Option 2.
-        
-        self.move_dir = 0 # 0: Right, 1: Down, 2: Left, 3: Up
-        
-        self.input.on('left', lambda: setattr(self, 'move_dir', (self.move_dir - 1) % 4))
-        self.input.on('right', lambda: setattr(self, 'move_dir', (self.move_dir + 1) % 4))
-        self.input.on('select', self.move_forward)
-        self.input.on('back', self.stop)
-        
-        while self.running:
-            self.draw()
-            # Draw Direction Indicator
-            if not self.game_over:
-                draw = self.display.get_draw()
-                cx, cy = config.DISPLAY_WIDTH // 2, config.DISPLAY_HEIGHT - 30
-                dirs = ["Right", "Down", "Left", "Up"]
-                draw.text((cx - 20, cy), f"Dir: {dirs[self.move_dir]}", fill=config.COLOR_TEXT)
-            
-            self.display.show()
-            
-            if self.input.simulate:
-                import pygame
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.running = False
-                    self.input.handle_pygame_event(event)
-            
-            time.sleep(0.05)
-
-    def move_forward(self):
-        if self.game_over:
-            self.reset_game()
-            return
-            
         deltas = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         dx, dy = deltas[self.move_dir]
         self.move(dx, dy)

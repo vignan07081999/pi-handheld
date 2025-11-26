@@ -69,38 +69,24 @@ class AppManager:
         print(f"Launching {app_info['name']}...")
         try:
             module = importlib.import_module(app_info['module_path'])
-            # Reload to ensure fresh state if re-opened
             importlib.reload(module)
             
             if hasattr(module, 'App'):
                 app_instance = module.App(self.display, self.input)
                 self.current_app = app_instance
                 
-                # Transfer control to App
-                # The App is responsible for its own loop or we call a run method?
-                # Better: We call a run method that blocks until exit, 
-                # OR we switch the 'update' and 'draw' calls to the app.
-                # Let's go with the "App has its own loop" approach for simplicity in porting games,
-                # BUT for a unified OS, it's better if the App implements update() and draw() 
-                # and the Main Loop calls them.
-                # However, the user asked for "Apps that can be used...".
-                # Let's assume App has a run() method that takes control and returns when done.
+                # Clear Input Callbacks for the App
+                self.input.clear_callbacks()
                 
-                # Clear inputs before starting
-                self.input.callbacks['left'] = []
-                self.input.callbacks['right'] = []
-                self.input.callbacks['select'] = []
-                self.input.callbacks['back'] = []
+                # Register App Inputs
+                # The AppManager will now route inputs to the App's handle_input method
+                # So we don't need to register callbacks here unless the App uses them directly.
+                # But for compatibility, let's allow apps to register callbacks if they want,
+                # OR we enforce handle_input.
+                # Let's enforce handle_input for cleaner architecture.
                 
-                # Register global back to exit app
-                # We let the App handle 'back' to stop its run() loop.
-                # When run() returns, we call close_current_app() below.
-                # self.input.on('back', self.close_current_app)
-                
-                app_instance.run()
-                
-                # When run() returns, we are back
-                self.close_current_app()
+                # Register Global Back to Exit
+                self.input.on('back', self.close_current_app)
                 
             else:
                 print(f"Error: No 'App' class found in {app_info['name']}")
@@ -114,26 +100,25 @@ class AppManager:
     def close_current_app(self):
         print("Closing app, returning to menu...")
         self.current_app = None
-        # Restore Menu Controls
-        self.input.callbacks['left'] = []
-        self.input.callbacks['right'] = []
-        self.input.callbacks['select'] = []
-        self.input.callbacks['back'] = []
+        self.input.clear_callbacks()
         
+        # Restore Menu Controls
         self.input.on('left', lambda: self.main_menu.move_selection(-1))
         self.input.on('right', lambda: self.main_menu.move_selection(1))
         self.input.on('select', self.main_menu.select_current)
-        # Back on menu could show shutdown option?
 
     def run(self):
         # Initial Control Setup
-        self.close_current_app() # Sets up menu controls
+        self.close_current_app() 
         
+        # Global Input Handlers (routed manually)
+        self.input.on('left', lambda: self._route_input('left'))
+        self.input.on('right', lambda: self._route_input('right'))
+        self.input.on('select', lambda: self._route_input('select'))
+        self.input.on('back', lambda: self._route_input('back'))
+
         while self.running:
-            # Main System Loop
-            
-            # Update Inputs
-            # In simulation, we need to pump events
+            # Update Inputs (Simulation)
             if self.input.simulate and self.display.simulate:
                 import pygame
                 for event in pygame.event.get():
@@ -141,17 +126,41 @@ class AppManager:
                         self.running = False
                     self.input.handle_pygame_event(event)
             
-            # Logic
+            # Logic & Draw
             if self.current_app:
-                # If app is running in non-blocking mode (update/draw), do it here.
-                # But we decided on blocking run(). 
-                # If run() is blocking, we won't reach here until it returns.
-                # So this loop is mainly for the Menu.
-                pass
+                try:
+                    self.current_app.update()
+                    self.current_app.draw() # App draws to buffer
+                except Exception as e:
+                    print(f"App Crashed: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    self.close_current_app()
             else:
                 self.main_menu.update()
                 self.main_menu.draw(self.display.get_draw())
-                self.display.show()
             
-            time.sleep(0.01)
+            self.display.show()
+            time.sleep(0.03)
+
+    def _route_input(self, event_name):
+        if self.current_app:
+            handled = False
+            if hasattr(self.current_app, 'handle_input'):
+                handled = self.current_app.handle_input(event_name)
+            
+            if event_name == 'back' and not handled:
+                # Global Back Handler (only if app didn't consume it)
+                self.close_current_app()
+        else:
+            # Menu Navigation (Handled by callbacks registered in close_current_app)
+            # Wait, if we register callbacks in close_current_app, they will be called TWICE
+            # because we also registered global handlers above.
+            # FIX: Only use global handlers.
+            if event_name == 'left':
+                self.main_menu.move_selection(-1)
+            elif event_name == 'right':
+                self.main_menu.move_selection(1)
+            elif event_name == 'select':
+                self.main_menu.select_current()
 
