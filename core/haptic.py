@@ -3,7 +3,7 @@ import threading
 import config
 
 try:
-    from gpiozero import PWMOutputDevice
+    from gpiozero import OutputDevice
     HARDWARE_AVAILABLE = True
 except ImportError:
     HARDWARE_AVAILABLE = False
@@ -15,7 +15,8 @@ class HapticManager:
         
         if not self.simulate:
             try:
-                self.motor = PWMOutputDevice(config.PIN_HAPTIC, frequency=100)
+                # Use OutputDevice for simple On/Off (matches example.py)
+                self.motor = OutputDevice(config.PIN_HAPTIC, active_high=True, initial_value=False)
             except Exception as e:
                 print(f"Haptic Init Failed: {e}")
                 self.simulate = True
@@ -26,11 +27,11 @@ class HapticManager:
         if self.simulate:
             return
 
-        threading.Thread(target=self._vibrate_thread, args=(duration, intensity)).start()
+        threading.Thread(target=self._vibrate_thread, args=(duration,)).start()
 
-    def _vibrate_thread(self, duration, intensity):
+    def _vibrate_thread(self, duration):
         if self.motor:
-            self.motor.value = min(1.0, max(0.0, intensity))
+            self.motor.on()
             time.sleep(duration)
             self.motor.off()
 

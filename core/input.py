@@ -64,26 +64,25 @@ class InputManager:
         delta = current_steps - self.last_steps
         self.last_steps = current_steps
         
+        # print(f"DEBUG: Rotate steps={current_steps} delta={delta}")
+        
         if delta > 0:
             self._trigger('right')
         elif delta < 0:
             self._trigger('left')
 
     def _on_release(self):
-        # If it was held, when_held fired. Does when_released also fire?
-        # Usually yes. We need to distinguish.
-        # gpiozero: when_held fires after hold_time. 
-        # We can set a flag in when_held?
+        # print("DEBUG: Button Release")
         if not hasattr(self, 'was_held'):
             self.was_held = False
             
         if self.was_held:
             self.was_held = False # Reset
-            # Do nothing, handled by hold
         else:
             self._trigger('select')
 
     def _on_hold(self):
+        # print("DEBUG: Button Hold")
         self.was_held = True
         self._trigger('back')
 
@@ -92,6 +91,7 @@ class InputManager:
             self.callbacks[event_name].append(callback)
 
     def _trigger(self, event_name):
+        print(f"DEBUG: Input Event: {event_name}")
         if self.on_any_event:
             self.on_any_event(event_name)
             
