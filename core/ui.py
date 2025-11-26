@@ -91,7 +91,69 @@ class Menu:
             label = item['label']
             bbox = draw.textbbox((0, 0), label, font=self.title_font)
             text_w = bbox[2] - bbox[0]
-            draw.text((icon_center_x - text_w // 2, card_y + card_h - 40), label, font=self.title_font, fill=config.COLOR_TEXT)
+            
+            text_x = icon_center_x - text_w // 2
+            text_y = card_y + card_h - 40
+            
+            # Marquee if selected and too long
+            if is_selected and text_w > card_w - 20:
+                # Scroll based on time
+                t = time.time()
+                scroll_speed = 50 # pixels per second
+                scroll_dist = text_w - (card_w - 20) + 50 # +50 for pause/gap
+                
+                offset = (t * scroll_speed) % (scroll_dist * 2) # *2 for back and forth or loop?
+                # Let's do simple loop: Text moves left, then resets.
+                
+                # Better: Ping pong? Or just scroll left.
+                # Scroll left: x decreases.
+                
+                # Calculate offset
+                # We want to show the start, wait, scroll to end, wait.
+                period = scroll_dist / scroll_speed + 2 # +2s wait
+                phase = t % period
+                
+                if phase < 1: # Wait at start
+                    offset = 0
+                elif phase < period - 1: # Scroll
+                    offset = (phase - 1) * scroll_speed
+                else: # Wait at end
+                    offset = scroll_dist - 50 # Max scroll
+                
+                # Clip offset
+                offset = min(offset, text_w - (card_w - 20))
+                
+                # Draw with clip? PIL doesn't support clip rects easily on existing draw object.
+                # We can just draw it and let it overflow the card?
+                # The card background is drawn before.
+                # If we draw text outside card, it looks bad.
+                # We can clear the text area?
+                # Or just clamp x? No, that doesn't scroll.
+                
+                # Workaround: Create a temp image for the text line, crop it, and paste it.
+                # But we don't have easy paste access unless we use target_image.
+                # If target_image is None (simulation), we can't paste easily onto 'draw'.
+                
+                # Alternative: Just draw it. If it overflows the screen, it's fine (clipped by display).
+                # If it overflows the card but is on screen, it might look messy.
+                # But full screen menu -> card is basically full screen width.
+                # So overflow isn't a huge issue unless it hits neighbors.
+                # Neighbors are far away (DISPLAY_WIDTH).
+                
+                text_x = icon_center_x - (card_w - 20) // 2 - offset
+                
+                # Ensure we don't draw outside the card horizontally too much?
+                # Actually, since only one card is fully visible usually, it's fine.
+                
+            elif not is_selected and text_w > card_w - 20:
+                 # Truncate
+                 while text_w > card_w - 40 and len(label) > 3:
+                     label = label[:-4] + "..."
+                     bbox = draw.textbbox((0, 0), label, font=self.title_font)
+                     text_w = bbox[2] - bbox[0]
+                 text_x = icon_center_x - text_w // 2
+
+            draw.text((text_x, text_y), label, font=self.title_font, fill=config.COLOR_TEXT)
 
     def _draw_icon(self, draw, name, cx, cy, target_image=None):
         # Check for custom icon first
