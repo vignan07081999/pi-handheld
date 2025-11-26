@@ -27,7 +27,7 @@ PIN_HAPTIC = 26      # PWM or simple GPIO
 DISPLAY_WIDTH = 240
 DISPLAY_HEIGHT = 320
 DISPLAY_ROTATION = 90 # 0, 90, 180, 270
-DISPLAY_BAUDRATE = 60000000 # 60 MHz
+DISPLAY_BAUDRATE = 24000000 # 24 MHz (Safe default)
 
 # ==========================================
 # UI THEME (Dark AMOLED Style)
