@@ -8,7 +8,8 @@ sudo apt-get update
 sudo raspi-config nonint do_spi 0
 # libtiff5 is replaced by libtiff6 in newer Debian, or provided by libtiff-dev
 # python3-venv is needed for virtual environments
-sudo apt-get install -y python3-pip python3-pil python3-numpy python3-rpi.gpio python3-spidev python3-smbus libopenjp2-7 libtiff-dev python3-venv
+# swig and python3-dev are needed to build lgpio
+sudo apt-get install -y python3-pip python3-pil python3-numpy python3-rpi.gpio python3-spidev python3-smbus libopenjp2-7 libtiff-dev python3-venv swig python3-dev
 
 # Create Virtual Environment to avoid PEP 668 "externally-managed-environment" error
 echo "Creating Virtual Environment..."
