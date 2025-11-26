@@ -74,20 +74,6 @@ class AppManager:
             if hasattr(module, 'App'):
                 app_instance = module.App(self.display, self.input)
                 self.current_app = app_instance
-                
-                # Clear Input Callbacks for the App
-                self.input.clear_callbacks()
-                
-                # Register App Inputs
-                # The AppManager will now route inputs to the App's handle_input method
-                # So we don't need to register callbacks here unless the App uses them directly.
-                # But for compatibility, let's allow apps to register callbacks if they want,
-                # OR we enforce handle_input.
-                # Let's enforce handle_input for cleaner architecture.
-                
-                # Register Global Back to Exit
-                self.input.on('back', self.close_current_app)
-                
             else:
                 print(f"Error: No 'App' class found in {app_info['name']}")
                 
@@ -100,16 +86,10 @@ class AppManager:
     def close_current_app(self):
         print("Closing app, returning to menu...")
         self.current_app = None
-        self.input.clear_callbacks()
-        
-        # Restore Menu Controls
-        self.input.on('left', lambda: self.main_menu.move_selection(-1))
-        self.input.on('right', lambda: self.main_menu.move_selection(1))
-        self.input.on('select', self.main_menu.select_current)
 
     def run(self):
         # Initial Control Setup
-        self.close_current_app() 
+        self.input.clear_callbacks()
         
         # Global Input Handlers (routed manually)
         self.input.on('left', lambda: self._route_input('left'))
@@ -153,10 +133,7 @@ class AppManager:
                 # Global Back Handler (only if app didn't consume it)
                 self.close_current_app()
         else:
-            # Menu Navigation (Handled by callbacks registered in close_current_app)
-            # Wait, if we register callbacks in close_current_app, they will be called TWICE
-            # because we also registered global handlers above.
-            # FIX: Only use global handlers.
+            # Menu Navigation
             if event_name == 'left':
                 self.main_menu.move_selection(-1)
             elif event_name == 'right':

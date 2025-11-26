@@ -35,9 +35,20 @@ class Menu:
     # _load_font removed
 
     def move_selection(self, delta):
-        self.selected_index = (self.selected_index + delta) % len(self.items)
-        item_height = 50
-        self.target_scroll_offset = (self.selected_index * item_height) - (config.DISPLAY_HEIGHT / 2) + (item_height / 2)
+        # Accumulate steps to prevent too fast scrolling
+        if not hasattr(self, 'scroll_accumulator'):
+            self.scroll_accumulator = 0
+            
+        self.scroll_accumulator += delta
+        
+        # Only move every 2 steps
+        if abs(self.scroll_accumulator) >= 2:
+            move_dir = 1 if self.scroll_accumulator > 0 else -1
+            self.scroll_accumulator = 0 # Reset or decrement? Resetting feels more detent-aligned.
+            
+            self.selected_index = (self.selected_index + move_dir) % len(self.items)
+            item_height = 50
+            self.target_scroll_offset = (self.selected_index * item_height) - (config.DISPLAY_HEIGHT / 2) + (item_height / 2)
 
     def select_current(self):
         item = self.items[self.selected_index]

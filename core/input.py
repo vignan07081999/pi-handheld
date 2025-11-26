@@ -42,43 +42,10 @@ class InputManager:
         self.btn.when_held = self._on_hold
         self.btn.hold_time = config.LONG_PRESS_TIME
 
-    def _on_rotate(self):
-        # We need to determine direction.
-        # gpiozero doesn't pass direction to callback directly, but we can check steps change?
-        # Actually, RotaryEncoder has 'steps' property.
-        # But for simple left/right events, we might want to track last steps.
-        # Or use the internal value.
-        # Wait, if we use wrap=False, steps goes up and down.
-        # We can just compare to last value?
-        # But simpler: gpiozero 2.0 has when_rotated_clockwise and when_rotated_counter_clockwise?
-        # Let's check docs or assume standard behavior.
-        # Standard RotaryEncoder has when_rotated.
-        # Let's track steps.
-        pass
-
-    # Re-implementing _on_rotate with logic to detect direction
-    # We need to store last_steps
-        self.last_steps = 0
-        
-    def _on_rotate(self):
-        current_steps = self.encoder.steps
-        delta = current_steps - self.last_steps
-        self.last_steps = current_steps
-        
-        # print(f"DEBUG: Rotate steps={current_steps} delta={delta}")
-        
-        if delta > 0:
-            self._trigger('right')
-        elif delta < 0:
-            self._trigger('left')
-
-    def _on_release(self):
-        # print("DEBUG: Button Release")
-        if not hasattr(self, 'was_held'):
-            self.was_held = False
-            
         if self.was_held:
             self.was_held = False # Reset
+            # Cooldown after release to prevent accidental clicks
+            self.ignore_until = time.time() + 0.5
         else:
             self._trigger('select')
 
@@ -100,6 +67,11 @@ class InputManager:
         }
 
     def _trigger(self, event_name):
+        # Check Cooldown
+        if hasattr(self, 'ignore_until') and time.time() < self.ignore_until:
+            print(f"DEBUG: Ignoring {event_name} due to cooldown")
+            return
+
         callbacks = self.callbacks[event_name]
         print(f"DEBUG: Input Event: {event_name} (Callbacks: {len(callbacks)})")
         
