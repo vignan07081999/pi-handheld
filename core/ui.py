@@ -262,7 +262,7 @@ Menu = ListMenu
 
 class StatusBar:
     def __init__(self):
-        self.height = 24
+        self.height = config.TOP_BAR_HEIGHT
         self.font = load_font(12, bold=True)
         self.last_update = 0
         
