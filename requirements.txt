@@ -1,0 +1,8 @@
+Pillow>=9.0.0
+numpy>=1.21.0
+spidev>=3.5
+RPi.GPIO>=0.7.0
+st7789>=0.0.4
+gpiozero>=1.6.2
+pygame>=2.1.0  # For simulation mode on PC
+requests>=2.26.0 # For Home Assistant API
