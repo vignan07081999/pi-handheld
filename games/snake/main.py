@@ -33,16 +33,6 @@ class App:
         self.wall_mode = wall_mode
         self.state = "game"
         self.reset_game()
-        
-        # Setup Game Controls
-        self.input.callbacks['left'] = []
-        self.input.callbacks['right'] = []
-        self.input.callbacks['select'] = []
-        self.input.callbacks['back'] = []
-        
-        self.input.on('left', self.turn_left)
-        self.input.on('right', self.turn_right)
-        self.input.on('back', self.stop)
 
     def reset_game(self):
         # Head is last. Moving Up (0, -1).
@@ -112,27 +102,9 @@ class App:
     def game_over(self):
         self.state = "game_over"
         highscore.save_highscore('snake', self.score)
-        # Reset controls for Game Over screen
-        self.input.callbacks['left'] = []
-        self.input.callbacks['right'] = []
-        self.input.callbacks['select'] = []
-        self.input.callbacks['back'] = []
-        
-        self.input.on('select', lambda: self.set_menu_mode()) # Restart goes to menu? Or restart same mode?
-        # Let's go to menu to pick mode again
-        self.input.on('back', self.stop)
 
     def set_menu_mode(self):
         self.state = "menu"
-        self.input.callbacks['left'] = []
-        self.input.callbacks['right'] = []
-        self.input.callbacks['select'] = []
-        self.input.callbacks['back'] = []
-        
-        self.input.on('left', lambda: self.menu.move_selection(-1))
-        self.input.on('right', lambda: self.menu.move_selection(1))
-        self.input.on('select', self.menu.select_current)
-        self.input.on('back', self.stop)
 
     def draw(self):
         draw = self.display.get_draw()
