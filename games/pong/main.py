@@ -121,41 +121,6 @@ class App:
             self.ball_vel[0] *= -1
             self.ball_pos[0] = self.paddle_w + 3
             self.score += 1
-            # Haptic on Hit
-            if hasattr(config, 'HAPTIC_DURATION_SHORT'):
-                # We need access to haptic manager. Input manager doesn't have it.
-                # But we can assume it's available globally or passed?
-                # Actually, AppManager passes (display, input).
-                # We don't have haptic manager here.
-                # However, config has haptic settings but not the device.
-                # We can't trigger haptic easily unless we import it or it's passed.
-                # Let's check main.py. AppManager is initialized with (display, input).
-                # Haptic is separate.
-                # We should probably add haptic to AppManager or make it a singleton/global.
-                # For now, let's skip or try to import?
-                # Better: The user wants haptics.
-                # I'll use a quick import or assume it's not critical if missing, 
-                # OR I can use the input manager's button haptic if it had one? No.
-                # Let's just print for now or leave it.
-                # Wait, the user said "Only do haptics when ball touches...".
-                # This implies haptics WERE working.
-                # Ah, InputManager triggers haptic on button press?
-                # No, HapticManager is separate.
-                # Maybe I should add HapticManager to AppManager?
-                pass
-
-        # Enemy AI (Simple tracking)
-        enemy_y = self.ball_pos[1] - self.paddle_h // 2
-        # Clamp enemy speed
-        # ...
-
-        # Enemy Collision (Right side - simulated wall for now or actual enemy?)
-        # The original code didn't have an enemy paddle drawn?
-        # Let's check draw.
-        # It draws a rectangle at DISPLAY_WIDTH - 10.
-        if self.ball_pos[0] >= config.DISPLAY_WIDTH - 15:
-             self.ball_vel[0] *= -1
-             # Enemy hit
 
         # Scoring
         if self.ball_pos[0] < 0:
