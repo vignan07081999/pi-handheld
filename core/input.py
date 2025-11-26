@@ -37,11 +37,25 @@ class InputManager:
         self.encoder.when_rotated = self._on_rotate
         
         # Button
-        self.btn = Button(config.PIN_ENCODER_SW, pull_up=True)
+        self.btn = Button(config.PIN_ENCODER_SW, pull_up=True, bounce_time=0.02, hold_time=config.LONG_PRESS_TIME)
         self.btn.when_released = self._on_release
         self.btn.when_held = self._on_hold
-        self.btn.hold_time = config.LONG_PRESS_TIME
 
+    def _on_rotate(self):
+        current_steps = self.encoder.steps
+        delta = current_steps - self.last_steps
+        self.last_steps = current_steps
+        
+        if delta > 0:
+            self._trigger('right')
+        elif delta < 0:
+            self._trigger('left')
+
+    def _on_release(self):
+        # print("DEBUG: Button Release")
+        if not hasattr(self, 'was_held'):
+            self.was_held = False
+            
         if self.was_held:
             self.was_held = False # Reset
             # Cooldown after release to prevent accidental clicks
